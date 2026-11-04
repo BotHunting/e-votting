@@ -422,14 +422,15 @@ function seedInitialData() {
 
   const candidatesSheet = getOrCreateSheet(ss, SHEET_NAMES.CANDIDATES);
   candidatesSheet.clear();
-  candidatesSheet.appendRow(['ID_Kandidat', 'ID_Pemilihan', 'No_Urut', 'Nama_Kandidat', 'Foto_URL', 'Visi_Misi']);
+  candidatesSheet.appendRow(['ID_Kandidat', 'ID_Pemilihan', 'No_Urut', 'Nama_Kandidat', 'Foto_URL', 'Visi_Misi', 'Kandidat']);
   candidatesSheet.appendRow([
     'CND-001',
     'ELC-2026-001',
     1,
     'H. Ahmad Dahlan, S.T.',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    'Visi: Mewujudkan Desa Digital Mandiri dan Transparan.\nMisi: Digitalisasi pelayanan umum dan peningkatan UMKM.'
+    'Visi: Mewujudkan Desa Digital Mandiri dan Transparan.\nMisi: Digitalisasi pelayanan umum dan peningkatan UMKM.',
+    'Kepala Desa'
   ]);
   candidatesSheet.appendRow([
     'CND-002',
@@ -437,7 +438,8 @@ function seedInitialData() {
     2,
     'Budi Santoso, S.Pd.',
     'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
-    'Visi: Desa Sejahtera, Gotong Royong, dan Berkelanjutan.\nMisi: Peningkatan sarana olahraga & ruang hijau.'
+    'Visi: Desa Sejahtera, Gotong Royong, dan Berkelanjutan.\nMisi: Peningkatan sarana olahraga & ruang hijau.',
+    'Kepala Desa'
   ]);
   candidatesSheet.appendRow([
     'CND-003',
@@ -445,7 +447,8 @@ function seedInitialData() {
     3,
     'Siti Nurhaliza, S.E.',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300',
-    'Visi: Pemberdayaan Perempuan dan Ekonomi Kreatif Desa.\nMisi: Pelatihan keterampilan dan bantuan modal usaha.'
+    'Visi: Pemberdayaan Perempuan dan Ekonomi Kreatif Desa.\nMisi: Pelatihan keterampilan dan bantuan modal usaha.',
+    'Kepala Desa'
   ]);
 
   const votersSheet = getOrCreateSheet(ss, SHEET_NAMES.VOTERS);

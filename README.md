@@ -104,7 +104,23 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     Frontend (index.html)                │
+│              Project Structure (Repository)              │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │ index.html (Wrapper/Frame)                         │ │
+│  │ - SEO metadata                                     │ │
+│  │ - Iframe ke script/index.html                      │ │
+│  └────────────────────────────────────────────────────┘ │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │ script/                                           │ │
+│  │ ├── index.html (Frontend E-Voting)                │ │
+│  │ ├── Code.js (Backend Google Apps Script)          │ │
+│  │ ├── appsscript.json                               │ │
+│  │ └── .clasp.json                                  │ │
+│  └────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│              Frontend (script/index.html)                │
 │              - Login UI                                  │
 │              - Admin Dashboard                           │
 │              - Staff TPS Dashboard                       │
@@ -160,11 +176,11 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 
 1. Buka [Google Apps Script](https://script.google.com/)
 2. Buat project baru
-3. Copy file `Code.js` dan `appsscript.json` ke project
+3. Copy file `script/Code.js` dan `script/appsscript.json` ke project
 4. Setup Google Sheets dengan sheet berikut:
    - `Users` - Data akun admin/staff
    - `Elections` - Data pemilihan
-   - `Candidates` - Data kandidat
+   - `Candidates` - Data kandidat (termasuk kolom Kandidat untuk jabatan)
    - `Voters_DPT` - Data pemilih
    - `Votes` - Data suara
    - `Audit_Logs` - Log aktivitas
@@ -179,8 +195,11 @@ npm install -g @google/clasp
 
 ```bash
 # Clone repository
-git clone https://github.com/username/e-votting.git
+git clone https://github.com/BotHunting/e-votting.git
 cd e-votting
+
+# Masuk ke folder script untuk backend deployment
+cd script
 
 # Login ke Google
 clasp login
