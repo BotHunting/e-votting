@@ -1,700 +1,157 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem E-Voting Pemilihan Lokal</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- SheetJS (Excel Export) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- jsPDF & AutoTable (PDF Export) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Informasi Dasar dan SEO -->
+    <title>Sistem E-Voting Pemilihan Lokal | Pemilihan Digital untuk Kelurahan/Desa</title>
+    <meta name="description" content="Sistem E-Voting digital untuk pemilihan lokal (Kepala Desa, RW, RT, BPD) berbasis Google Apps Script dan Google Sheets. Aman, transparan, dan mudah digunakan.">
+    <meta name="keywords" content="e-voting, sistem pemilihan digital, pemilihan online, voting desa, pilkades digital, pemilihan rw rt, google apps script voting">
+    <meta name="theme-color" content="#4f46e6">
+    <link rel="canonical" href="https://github.com/BotHunting/e-votting">
+
+    <!-- Ikon Online -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗳️</text></svg>" type="image/svg+xml">
+
+    <!-- Petunjuk Performa: Preconnect ke domain iframe untuk memuat lebih cepat -->
+    <link rel="preconnect" href="script/index.html">
+
+    <!-- Open Graph (untuk pratinjau di Facebook, LinkedIn, dll.) -->
+    <meta property="og:title" content="Sistem E-Voting Pemilihan Lokal">
+    <meta property="og:description" content="Sistem E-Voting digital untuk pemilihan lokal (Kepala Desa, RW, RT, BPD) berbasis Google Apps Script dan Google Sheets. Aman, transparan, dan mudah digunakan.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/BotHunting/e-votting">
+    <meta property="og:site_name" content="E-Voting System">
+
+    <!-- Twitter Cards (untuk pratinjau di Twitter/X) -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Sistem E-Voting Pemilihan Lokal">
+    <meta name="twitter:description" content="Sistem E-Voting digital untuk pemilihan lokal (Kepala Desa, RW, RT, BPD) berbasis Google Apps Script dan Google Sheets.">
+
+    <style>
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100%; 
+            width: 100%;
+            overflow: hidden; 
+            background-color: #f8fafc;
+        }
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f8fafc; /* Senada dengan background body */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        #loader p {
+            margin-top: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #64748b;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #3b82f6; /* Biru */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        main {
+            height: 100%;
+            width: 100%;
+        }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans text-slate-800 min-h-screen">
-
-  <!-- Navbar -->
-  <nav id="navbar" class="bg-indigo-900 text-white shadow-lg hidden">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <span class="text-xl font-bold tracking-wide">E-VOTING KELURAHAN/DESA</span>
-        <span id="userBadge" class="bg-indigo-700 text-xs px-2.5 py-1 rounded-full border border-indigo-500"></span>
-      </div>
-      <button onclick="logout()" class="bg-rose-600 hover:bg-rose-700 text-xs px-3 py-1.5 rounded transition font-medium">Keluar</button>
-    </div>
-  </nav>
-
-  <div class="max-w-7xl mx-auto px-4 py-6">
-
-    <!-- LOGIN VIEW -->
-    <div id="loginView" class="max-w-md mx-auto mt-16 bg-white p-8 rounded-xl shadow-md border border-slate-200">
-      <div class="text-center mb-6">
-        <h2 class="text-2xl font-bold text-slate-900">Portal Pemilihan Umum</h2>
-        <p class="text-sm text-slate-500">Masuk sebagai Admin Panitia atau Staff TPS</p>
-      </div>
-      <form onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Username</label>
-          <input type="text" id="loginUsername" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Password</label>
-          <input type="password" id="loginPassword" required class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
-        </div>
-        <button type="submit" id="btnLogin" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium transition">Masuk Sistem</button>
-      </form>
+<body>
+    <!-- Pre-loader untuk meningkatkan skor FCP/LCP dan User Experience -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <p>Memuat sistem e-voting...</p>
     </div>
 
-    <!-- ADMIN DASHBOARD -->
-    <div id="adminDashboard" class="hidden space-y-6">
-      <!-- Top Bar -->
-      <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
-        <div>
-          <h1 class="text-xl font-bold text-slate-900">Dashboard Panel Admin</h1>
-          <p class="text-xs text-slate-500">Kelola Pemilihan, Paslon, DPT, dan Hasil Real-time</p>
-        </div>
-        <div class="flex space-x-2">
-          <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded font-medium">Ekspor Excel</button>
-          <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-3 py-2 rounded font-medium">Ekspor PDF</button>
-        </div>
-      </div>
+    <main>
+        <!-- Fallback content untuk mesin pencari dan browser tanpa JavaScript -->
+        <noscript>
+            <h1>Sistem E-Voting Pemilihan Lokal</h1>
+            <p>Sistem pemilihan digital berbasis web untuk pemilihan lokal di tingkat kelurahan/desa.</p>
+            <p>Menggunakan <strong>Google Apps Script</strong> sebagai backend dan <strong>Google Sheets</strong> sebagai database, memberikan solusi yang aman, transparan, dan mudah diakses tanpa biaya server.</p>
+            <h2>Fitur Utama:</h2>
+            <ul>
+                <li><strong>Multi-Election Support:</strong> Satu NIK dapat memilih di berbagai pemilihan berbeda (Kepala Desa, RW, RT, BPD)</li>
+                <li><strong>CRUD Lengkap:</strong> Kelola kandidat dan DPT dengan fitur tambah, edit, dan hapus</li>
+                <li><strong>Real-time Analytics:</strong> Grafik perolehan suara terpisah untuk setiap pemilihan</li>
+                <li><strong>Aman & Transparan:</strong> LockService mencegah double vote, audit log lengkap</li>
+                <li><strong>Anti-Double Vote:</strong> Validasi ganda per pemilihan, support multi-election</li>
+            </ul>
+            <p>Untuk pengalaman terbaik, silakan aktifkan JavaScript di browser Anda.</p>
+        </noscript>
 
-      <!-- Tab Buttons -->
-      <div class="flex border-b border-slate-200 bg-white px-4 pt-3 rounded-t-xl space-x-4 text-sm font-medium">
-        <button onclick="switchAdminTab('analytics')" id="tabBtn-analytics" class="py-2 border-b-2 border-indigo-600 text-indigo-600">Analytics & Hasil</button>
-        <button onclick="switchAdminTab('candidates')" id="tabBtn-candidates" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola Paslon</button>
-        <button onclick="switchAdminTab('voters')" id="tabBtn-voters" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola DPT</button>
-        <button onclick="switchAdminTab('logs')" id="tabBtn-logs" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Audit Log</button>
-      </div>
+        <iframe title="Sistem E-Voting Pemilihan Lokal" src="script/index.html">
+            Memuat Sistem E-Voting...
+        </iframe>
+    </main>
 
-      <!-- TAB 1: ANALYTICS -->
-      <div id="tabContent-analytics" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white p-4 rounded-xl shadow-sm border text-center">
-            <p class="text-xs text-slate-500">Total DPT</p>
-            <p id="statTotalDPT" class="text-2xl font-bold text-slate-800">0</p>
-          </div>
-          <div class="bg-white p-4 rounded-xl shadow-sm border text-center">
-            <p class="text-xs text-slate-500">Suara Masuk</p>
-            <p id="statTotalSuara" class="text-2xl font-bold text-indigo-600">0</p>
-          </div>
-          <div class="bg-white p-4 rounded-xl shadow-sm border text-center">
-            <p class="text-xs text-slate-500">Tingkat Partisipasi</p>
-            <p id="statPartisipasi" class="text-2xl font-bold text-emerald-600">0%</p>
-          </div>
-        </div>
-        <div id="chartsContainer" class="space-y-6"></div>
-      </div>
-
-      <!-- TAB 2: KELOLA PASLON / KANDIDAT -->
-      <div id="tabContent-candidates" class="hidden space-y-6">
-        <!-- Form Tambah/Edit Paslon -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border">
-          <h3 id="candidateFormTitle" class="font-bold text-slate-800 mb-4">Tambah Paslon Baru</h3>
-          <form onsubmit="handleSaveCandidate(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input type="hidden" id="candEditId">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">ID Pemilihan</label>
-              <select id="candElectionId" required class="w-full px-3 py-2 border rounded-lg text-sm"></select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor Urut</label>
-              <input type="number" id="candNoUrut" required min="1" class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Paslon / Kandidat</label>
-              <input type="text" id="candNama" required class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan/Lembaga</label>
-              <input type="text" id="candJabatan" placeholder="Kepala Desa, BPD, RW, RT" class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-semibold text-slate-600 mb-1">URL Foto (Gambar)</label>
-              <input type="url" id="candFotoUrl" placeholder="https://..." class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div class="md:col-span-3">
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Visi & Misi</label>
-              <textarea id="candVisiMisi" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
-            </div>
-            <div class="md:col-span-3 flex justify-end space-x-2">
-              <button type="button" onclick="resetCandidateForm()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
-              <button type="submit" id="btnSaveCandidate" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Simpan Paslon</button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Tabel Daftar Paslon -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border overflow-x-auto">
-          <h3 class="font-bold text-slate-800 mb-4">Daftar Paslon Terdaftar</h3>
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-100 text-slate-600 border-b">
-                <th class="p-2">No. Urut</th>
-                <th class="p-2">Foto</th>
-                <th class="p-2">Nama Kandidat</th>
-                <th class="p-2">Jabatan/Lembaga</th>
-                <th class="p-2">Visi Misi</th>
-                <th class="p-2 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="candidateTableBody" class="divide-y"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TAB 3: KELOLA DPT -->
-      <div id="tabContent-voters" class="hidden space-y-6">
-        <!-- Form Input DPT -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border">
-          <h3 class="font-bold text-slate-800 mb-4">Tambah DPT Pemilih Baru</h3>
-          <form onsubmit="handleAddVoter(event)" class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Pemilihan</label>
-              <select id="voterElectionId" required class="w-full px-3 py-2 border rounded-lg text-sm"></select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">NIK Pemilih</label>
-              <input type="text" id="voterNik" maxlength="16" required class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Pemilih</label>
-              <input type="text" id="voterName" required class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">RT</label>
-              <input type="text" id="voterRt" required placeholder="01" class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">RW</label>
-              <input type="text" id="voterRw" required placeholder="03" class="w-full px-3 py-2 border rounded-lg text-sm">
-            </div>
-            <div class="md:col-span-4 flex justify-end">
-              <button type="submit" id="btnAddVoter" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Simpan Data DPT</button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Tabel Daftar DPT -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border overflow-x-auto">
-          <h3 class="font-bold text-slate-800 mb-4">Daftar Pemilih Tetap (DPT)</h3>
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-100 text-slate-600 border-b">
-                <th class="p-2">NIK</th>
-                <th class="p-2">Nama Pemilih</th>
-                <th class="p-2">RT / RW</th>
-                <th class="p-2">Pemilihan</th>
-                <th class="p-2">Status Memilih</th>
-                <th class="p-2 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="voterTableBody" class="divide-y"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TAB 4: AUDIT LOGS -->
-      <div id="tabContent-logs" class="hidden bg-white p-6 rounded-xl shadow-sm border">
-        <h3 class="font-bold text-slate-800 mb-4">Audit Log Kegiatan (Security History)</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="bg-slate-100 text-slate-600 border-b">
-                <th class="p-2">Timestamp</th>
-                <th class="p-2">Account ID</th>
-                <th class="p-2">Role</th>
-                <th class="p-2">Aksi</th>
-                <th class="p-2">Detail</th>
-              </tr>
-            </thead>
-            <tbody id="auditLogBody" class="divide-y"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- STAFF / TPS DASHBOARD -->
-    <div id="staffDashboard" class="hidden space-y-6">
-      <div class="bg-white p-4 rounded-xl shadow-sm border">
-        <h1 class="text-xl font-bold text-slate-900">Layar Pelayanan TPS</h1>
-        <p class="text-xs text-slate-500">Verifikasi NIK Pemilih sebelum membuka bilik suara digital</p>
-      </div>
-
-      <!-- Verifikasi DPT -->
-      <div class="bg-white p-6 rounded-xl shadow-sm border max-w-xl mx-auto">
-        <h3 class="font-bold text-slate-800 mb-4">Pemeriksaan Data Pemilih (DPT)</h3>
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Pilih Pemilihan</label>
-            <select id="staffElectionSelect" class="w-full px-3 py-2 border rounded-lg text-sm"></select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-600 mb-1">Masukkan NIK Pemilih</label>
-            <input type="text" id="voterNikInput" placeholder="3525xxxxxxxxxxxx" class="w-full px-3 py-2 border rounded-lg text-sm">
-          </div>
-          <button onclick="verifyVoter()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Verifikasi NIK</button>
-        </div>
-      </div>
-
-      <!-- Digital Ballot Box Modal / View -->
-      <div id="ballotBoxView" class="hidden bg-white p-6 rounded-xl shadow-md border max-w-4xl mx-auto">
-        <div class="text-center mb-6 border-b pb-4">
-          <h2 class="text-2xl font-bold text-slate-900">Bilik Suara Digital</h2>
-          <p class="text-sm text-slate-500">Pilih salah satu pasangan calon di bawah ini secara BEBAS dan RAHASIA</p>
-        </div>
-
-        <div id="candidatesContainer" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    // GANTI DENGAN URL WEB APP APPS SCRIPT ANDA
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz77z_j3UU67KwiRN95BtaUM2siCE-kFRoJ_tBgtqGvqBtCysUUtK6eimTqmxZ2pPOc/exec';
-
-    let currentUser = null;
-    let initialData = {};
-    let chartInstance = null;
-    let activeVoterNik = null;
-
-    async function apiRequest(action, payload = null, method = 'POST') {
-      try {
-        let response;
-        if (method === 'GET') {
-          response = await fetch(`${GAS_API_URL}?action=${action}`);
-        } else {
-          response = await fetch(GAS_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action, payload })
-          });
-        }
-        return await response.json();
-      } catch (e) {
-        alert('Gagal terhubung ke server Google Sheets API.');
-        return { success: false };
-      }
+    <!-- Structured Data untuk SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Sistem E-Voting Pemilihan Lokal",
+      "applicationCategory": "GovernmentApplication",
+      "operatingSystem": "Web Browser",
+      "description": "Sistem E-Voting digital untuk pemilihan lokal (Kepala Desa, RW, RT, BPD) berbasis Google Apps Script dan Google Sheets. Aman, transparan, dan mudah digunakan.",
+      "url": "https://github.com/BotHunting/e-votting",
+      "author": {
+        "@type": "Organization",
+        "name": "BotHunting",
+        "email": "bot.hunting101@gmail.com"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "IDR",
+        "description": "Open source - gratis digunakan"
+      },
+      "featureList": [
+        "Multi-Election Support",
+        "CRUD Lengkap",
+        "Real-time Analytics",
+        "Anti-Double Vote",
+        "Audit Logging",
+        "Export Excel/PDF"
+      ]
     }
+    </script>
 
-    async function handleLogin(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnLogin');
-      btn.disabled = true;
-      btn.innerText = 'Memverifikasi...';
+    <!-- Script untuk menyembunyikan pre-loader setelah iframe selesai dimuat -->
+    <script>
+        const iframe = document.querySelector('iframe');
+        const loader = document.getElementById('loader');
 
-      const payload = {
-        username: document.getElementById('loginUsername').value,
-        password: document.getElementById('loginPassword').value
-      };
-
-      const res = await apiRequest('login', payload);
-      btn.disabled = false;
-      btn.innerText = 'Masuk Sistem';
-
-      if (res.success) {
-        currentUser = res.user;
-        document.getElementById('navbar').classList.remove('hidden');
-        document.getElementById('userBadge').innerText = `${currentUser.nama} (${currentUser.role})`;
-        document.getElementById('loginView').classList.add('hidden');
-
-        if (currentUser.role === 'Admin') {
-          document.getElementById('adminDashboard').classList.remove('hidden');
-          loadAdminDashboard();
-        } else {
-          document.getElementById('staffDashboard').classList.remove('hidden');
-          loadStaffDashboard();
-        }
-      } else {
-        alert(res.message);
-      }
-    }
-
-    function logout() {
-      currentUser = null;
-      location.reload();
-    }
-
-    // ==================== ADMIN LOGIC ====================
-    async function loadAdminDashboard() {
-      try {
-        const data = await apiRequest('getInitialData', null, 'GET');
-        if (data.success) {
-          initialData = data;
-          renderAdminData();
-          renderAllCharts();
-        } else {
-          console.error('Gagal mengambil data awal:', data.message);
-          alert('Gagal memuat data dashboard. Silakan refresh halaman.');
-        }
-      } catch (error) {
-        console.error('Error di loadAdminDashboard:', error);
-        alert('Terjadi kesalahan saat memuat dashboard. Silakan refresh halaman.');
-      }
-      loadAuditLogs();
-    }
-
-    // Tab Switching
-    function switchAdminTab(tabName) {
-      ['analytics', 'candidates', 'voters', 'logs'].forEach(t => {
-        document.getElementById(`tabContent-${t}`).classList.add('hidden');
-        document.getElementById(`tabBtn-${t}`).className = 'py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700';
-      });
-      document.getElementById(`tabContent-${tabName}`).classList.remove('hidden');
-      document.getElementById(`tabBtn-${tabName}`).className = 'py-2 border-b-2 border-indigo-600 text-indigo-600';
-    }
-
-    // Populate Dropdowns & Render Tables
-    function renderAdminData() {
-      const elections = initialData.elections || [];
-      const candSelect = document.getElementById('candElectionId');
-      const voterSelect = document.getElementById('voterElectionId');
-
-      const optionsHtml = elections.map(e => `<option value="${e.ID_Pemilihan}">${e.Kategori} (${e.ID_Pemilihan})</option>`).join('');
-      if (candSelect) candSelect.innerHTML = optionsHtml;
-      if (voterSelect) voterSelect.innerHTML = optionsHtml;
-
-      // Render Table Paslon
-      const candidates = initialData.candidates || [];
-      const candTbody = document.getElementById('candidateTableBody');
-      if (candTbody) {
-        candTbody.innerHTML = candidates.map(c => `
-          <tr>
-            <td class="p-2 font-bold">${c.No_Urut}</td>
-            <td class="p-2"><img src="${c.Foto_URL || 'https://via.placeholder.com/50'}" class="w-10 h-10 object-cover rounded-full"></td>
-            <td class="p-2 font-semibold">${c.Nama_Kandidat}</td>
-            <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-indigo-100 text-indigo-800">${c.Kandidat || '-'}</span></td>
-            <td class="p-2 text-slate-600 max-w-xs truncate">${c.Visi_Misi}</td>
-            <td class="p-2 text-center space-x-1">
-              <button onclick="editCandidate('${c.ID_Kandidat}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
-              <button onclick="deleteCandidate('${c.ID_Kandidat}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
-            </td>
-          </tr>
-        `).join('');
-      }
-
-      // Render Table DPT
-      const voters = initialData.voters || [];
-      const voterTbody = document.getElementById('voterTableBody');
-      if (voterTbody) {
-        // Get election category from initialData
-        const getElectionCategory = (idPemilihan) => {
-          const election = initialData.elections?.find(e => String(e.ID_Pemilihan) === String(idPemilihan));
-          return election ? election.Kategori : idPemilihan;
-        };
-
-        voterTbody.innerHTML = voters.map(v => `
-          <tr>
-            <td class="p-2 font-mono">${v.NIK}</td>
-            <td class="p-2 font-semibold">${v.Nama_Pemilih}</td>
-            <td class="p-2">${v.RT_RW}</td>
-            <td class="p-2 text-xs text-slate-600">${getElectionCategory(v.ID_Pemilihan)}</td>
-            <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${v.Status_Memilih === 'Sudah' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.Status_Memilih}</span></td>
-            <td class="p-2 text-center">
-              <button onclick="deleteVoter('${v.ID_Pemilih}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
-            </td>
-          </tr>
-        `).join('');
-      }
-    }
-
-    // Simpan / Edit Candidate
-    async function handleSaveCandidate(e) {
-      e.preventDefault();
-      const editId = document.getElementById('candEditId').value;
-      const action = editId ? 'updateCandidate' : 'addCandidate';
-
-      const payload = {
-        user_id: currentUser.id,
-        role: currentUser.role,
-        id_kandidat: editId,
-        id_pemilihan: document.getElementById('candElectionId').value,
-        no_urut: document.getElementById('candNoUrut').value,
-        nama: document.getElementById('candNama').value,
-        foto_url: document.getElementById('candFotoUrl').value,
-        visi_misi: document.getElementById('candVisiMisi').value,
-        kandidat_jabatan: document.getElementById('candJabatan').value
-      };
-
-      const res = await apiRequest(action, payload);
-      alert(res.message);
-      if (res.success) {
-        resetCandidateForm();
-        loadAdminDashboard();
-      }
-    }
-
-    function editCandidate(idKandidat) {
-      const c = initialData.candidates.find(item => String(item.ID_Kandidat) === String(idKandidat));
-      if (!c) return;
-
-      document.getElementById('candEditId').value = c.ID_Kandidat;
-      document.getElementById('candElectionId').value = c.ID_Pemilihan;
-      document.getElementById('candNoUrut').value = c.No_Urut;
-      document.getElementById('candNama').value = c.Nama_Kandidat;
-      document.getElementById('candFotoUrl').value = c.Foto_URL;
-      document.getElementById('candVisiMisi').value = c.Visi_Misi;
-      document.getElementById('candJabatan').value = c.Kandidat || '';
-
-      document.getElementById('candidateFormTitle').innerText = 'Edit Data Paslon';
-      switchAdminTab('candidates');
-    }
-
-    function resetCandidateForm() {
-      document.getElementById('candEditId').value = '';
-      document.getElementById('candNoUrut').value = '';
-      document.getElementById('candNama').value = '';
-      document.getElementById('candFotoUrl').value = '';
-      document.getElementById('candVisiMisi').value = '';
-      document.getElementById('candJabatan').value = '';
-      document.getElementById('candidateFormTitle').innerText = 'Tambah Paslon Baru';
-    }
-
-    async function deleteCandidate(idKandidat) {
-      if (!confirm('Apakah Anda yakin ingin menghapus paslon ini?')) return;
-      const res = await apiRequest('deleteCandidate', { id_kandidat: idKandidat, user_id: currentUser.id, role: currentUser.role });
-      alert(res.message);
-      if (res.success) loadAdminDashboard();
-    }
-
-    async function deleteVoter(idPemilih) {
-      if (!confirm('Apakah Anda yakin ingin menghapus DPT ini?')) return;
-      const res = await apiRequest('deleteVoter', { id_pemilih: idPemilih, user_id: currentUser.id, role: currentUser.role });
-      alert(res.message);
-      if (res.success) loadAdminDashboard();
-    }
-
-    async function handleAddVoter(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnAddVoter');
-      btn.disabled = true;
-      btn.innerText = 'Menyimpan...';
-
-      const rtValue = document.getElementById('voterRt').value.trim();
-      const rwValue = document.getElementById('voterRw').value.trim();
-      const rtRwCombined = `RT ${rtValue} / RW ${rwValue}`;
-
-      const payload = {
-        user_id: currentUser.id,
-        role: currentUser.role,
-        id_pemilihan: document.getElementById('voterElectionId').value,
-        nik: document.getElementById('voterNik').value,
-        nama: document.getElementById('voterName').value,
-        rt_rw: rtRwCombined
-      };
-
-      const res = await apiRequest('addVoter', payload);
-      btn.disabled = false;
-      btn.innerText = 'Simpan Data DPT';
-      alert(res.message);
-
-      if (res.success) {
-        document.getElementById('voterNik').value = '';
-        document.getElementById('voterName').value = '';
-        document.getElementById('voterRt').value = '';
-        document.getElementById('voterRw').value = '';
-        loadAdminDashboard();
-      }
-    }
-
-    async function renderAllCharts() {
-      const elections = initialData.elections || [];
-      const container = document.getElementById('chartsContainer');
-      if (!container) return;
-
-      container.innerHTML = '';
-
-      let totalDPT = 0;
-      let totalVotesCast = 0;
-
-      for (const election of elections) {
-        const res = await apiRequest('getAnalytics&id_pemilihan=' + election.ID_Pemilihan, null, 'GET');
-        if (res.success) {
-          totalDPT += res.summary.totalDPT || 0;
-          totalVotesCast += res.summary.totalVotesCast || 0;
-
-          const chartCard = document.createElement('div');
-          chartCard.className = 'bg-white p-6 rounded-xl shadow-sm border';
-          chartCard.innerHTML = `
-            <h3 class="font-bold text-slate-800 mb-4">${election.Kategori}</h3>
-            <div class="h-64"><canvas id="chart-${election.ID_Pemilihan}"></canvas></div>
-          `;
-          container.appendChild(chartCard);
-
-          if (res.results && res.results.length > 0) {
-            renderSingleChart(`chart-${election.ID_Pemilihan}`, res.results, election.Kategori);
-          }
-        }
-      }
-
-      document.getElementById('statTotalDPT').innerText = totalDPT;
-      document.getElementById('statTotalSuara').innerText = totalVotesCast;
-      const participationRate = totalDPT > 0 ? ((totalVotesCast / totalDPT) * 100).toFixed(2) : 0;
-      document.getElementById('statPartisipasi').innerText = participationRate + '%';
-    }
-
-    function renderSingleChart(canvasId, results, title) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
-
-      const ctx = canvas.getContext('2d');
-      const labels = results.map(r => `No. ${r.no_urut} (${r.nama})`);
-      const dataVotes = results.map(r => r.total_suara);
-
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Perolehan Suara',
-            data: dataVotes,
-            backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#ef4444']
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-      });
-    }
-
-    async function loadAuditLogs() {
-      try {
-        const res = await apiRequest('getAuditLogs', null, 'GET');
-        if (res.success) {
-          const tbody = document.getElementById('auditLogBody');
-          if (tbody && res.logs && res.logs.length > 0) {
-            tbody.innerHTML = res.logs.map(log => `
-              <tr>
-                <td class="p-2">${new Date(log.Timestamp).toLocaleString()}</td>
-                <td class="p-2">${log.Account_ID}</td>
-                <td class="p-2"><span class="px-1.5 py-0.5 rounded text-[10px] ${log.Role === 'Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}">${log.Role}</span></td>
-                <td class="p-2 font-semibold">${log.Action_Type}</td>
-                <td class="p-2 text-slate-600">${log.Description}</td>
-              </tr>
-            `).join('');
-          } else if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada aktivitas</td></tr>';
-          }
-        }
-      } catch (error) {
-        console.error('Error di loadAuditLogs:', error);
-      }
-    }
-
-    // ==================== STAFF LOGIC ====================
-    async function loadStaffDashboard() {
-      try {
-        const data = await apiRequest('getInitialData', null, 'GET');
-        if (data.success) {
-          initialData = data;
-          const select = document.getElementById('staffElectionSelect');
-          if (select && data.elections && data.elections.length > 0) {
-            select.innerHTML = data.elections.map(e => `<option value="${e.ID_Pemilihan}">${e.Kategori} (${e.Tanggal})</option>`).join('');
-          } else if (select) {
-            select.innerHTML = '<option value="">Tidak ada pemilihan aktif</option>';
-          }
-        } else {
-          console.error('Gagal mengambil data staff dashboard:', data.message);
-          alert('Gagal memuat data. Silakan refresh halaman.');
-        }
-      } catch (error) {
-        console.error('Error di loadStaffDashboard:', error);
-        alert('Terjadi kesalahan saat memuat dashboard. Silakan refresh halaman.');
-      }
-    }
-
-    function verifyVoter() {
-      const nik = document.getElementById('voterNikInput').value.trim();
-      const idPemilihan = document.getElementById('staffElectionSelect').value;
-
-      const voter = initialData.voters.find(v => String(v.NIK) === nik && String(v.ID_Pemilihan) === idPemilihan);
-
-      if (!voter) {
-        alert('NIK tidak ditemukan dalam DPT!');
-        return;
-      }
-
-      if (voter.Status_Memilih === 'Sudah') {
-        alert('PERINGATAN: NIK ini sudah menggunakan hak pilihnya!');
-        return;
-      }
-
-      activeVoterNik = nik;
-      renderBallot(idPemilihan);
-    }
-
-    function renderBallot(idPemilihan) {
-      const candidates = initialData.candidates.filter(c => String(c.ID_Pemilihan) === String(idPemilihan));
-      const container = document.getElementById('candidatesContainer');
-
-      container.innerHTML = candidates.map(c => `
-        <div class="border rounded-xl p-4 text-center space-y-3 bg-slate-50 hover:shadow-md transition">
-          <div class="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold mx-auto text-lg">${c.No_Urut}</div>
-          <img src="${c.Foto_URL || 'https://via.placeholder.com/150'}" class="w-32 h-32 object-cover rounded-lg mx-auto border">
-          <h4 class="font-bold text-slate-900">${c.Nama_Kandidat}</h4>
-          <p class="text-xs text-slate-500 line-clamp-3">${c.Visi_Misi}</p>
-          <button onclick="submitVote('${c.ID_Kandidat}', '${idPemilihan}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium text-sm">COBLOS PASLON INI</button>
-        </div>
-      `).join('');
-
-      document.getElementById('ballotBoxView').classList.remove('hidden');
-    }
-
-    async function submitVote(idKandidat, idPemilihan) {
-      if (!confirm('Apakah Anda yakin ingin menyalurkan suara untuk paslon ini?')) return;
-
-      const payload = {
-        nik: activeVoterNik,
-        id_pemilihan: idPemilihan,
-        id_kandidat: idKandidat,
-        staff_id: currentUser.id
-      };
-
-      const res = await apiRequest('verifyAndSubmitVote', payload);
-      alert(res.message);
-
-      if (res.success) {
-        document.getElementById('ballotBoxView').classList.add('hidden');
-        document.getElementById('voterNikInput').value = '';
-        activeVoterNik = null;
-        loadStaffDashboard();
-      }
-    }
-
-    // ==================== EXPORT LOGIC ====================
-    function exportToExcel() {
-      const wb = XLSX.utils.book_new();
-      const wsData = [
-        ["REKAPITULASI HASIL E-VOTING"],
-        ["Tanggal Ekspor", new Date().toLocaleString()],
-        [],
-        ["Total DPT", document.getElementById('statTotalDPT').innerText],
-        ["Total Suara Masuk", document.getElementById('statTotalSuara').innerText],
-        ["Partisipasi", document.getElementById('statPartisipasi').innerText]
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      XLSX.utils.book_append_sheet(wb, ws, "Rekapitulasi");
-      XLSX.writeFile(wb, "Hasil_EVoting_Lokal.xlsx");
-    }
-
-    function exportToPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text("BERITA ACARA REKAPITULASI E-VOTING", 14, 20);
-      doc.setFontSize(10);
-      doc.text(`Waktu Cetak: ${new Date().toLocaleString()}`, 14, 28);
-      doc.text(`Total DPT: ${document.getElementById('statTotalDPT').innerText}`, 14, 35);
-      doc.text(`Suara Sah Masuk: ${document.getElementById('statTotalSuara').innerText}`, 14, 42);
-
-      doc.save("Berita_Acara_EVoting.pdf");
-    }
-  </script>
+        iframe.addEventListener('load', function() {
+            // Sembunyikan loader dengan transisi
+            loader.style.opacity = '0';
+            // Hapus loader dari DOM setelah transisi selesai
+            setTimeout(() => { loader.style.display = 'none'; }, 500); // Sesuaikan dengan durasi transisi CSS
+        });
+    </script>
 </body>
 </html>
