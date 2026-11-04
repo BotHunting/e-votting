@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![E-Voting](https://img.shields.io/badge/version-1.2.0-blue)
+![E-Voting](https://img.shields.io/badge/version-2.0.0-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-yellow)
 
@@ -146,6 +146,7 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 | **Charts** | Chart.js |
 | **Export** | SheetJS (Excel), jsPDF (PDF) |
 | **Deployment** | CLASP (Command Line Apps Script Projects) |
+| **Security** | SHA-256 Hashing, Session Management, Rate Limiting |
 
 ---
 
@@ -272,23 +273,19 @@ cd script
 clasp deploy --description "Deployment E-Voting v1.2.0"
 ```
 
-#### Langkah 8: Update URL di Frontend
+#### Langkah 8: Buka Aplikasi
 
-1. Copy URL deployment dari Langkah 7
-2. Buka file `script/index.html`
-3. Cari baris: `const GAS_API_URL = '...';`
-4. Ganti URL lama dengan URL deployment baru
-5. Push update via CLASP:
+Frontend memanggil backend melalui `google.script.run`, jadi buka URL Web App dari Langkah 7 secara langsung. URL deployment tidak perlu disimpan di `script/index.html`.
+
+Setelah mengubah kode, push dan deploy ulang via CLASP:
 ```bash
 clasp push
 clasp deploy
 ```
 
-#### Langkah 9: Update Wrapper (Root index.html)
+#### Langkah 9: Hosting Wrapper Opsional
 
-1. Buka file `index.html` di root
-2. Pastikan iframe src menunjuk ke `script/index.html`
-3. Deploy wrapper ke hosting Anda (Vercel, Netlify, GitHub Pages, dll)
+Wrapper statis di root tidak menyediakan `google.script.run`. Jika wrapper digunakan, arahkan iframe ke URL Web App dari Langkah 7; jangan arahkan ke file lokal `script/index.html`.
 
 ---
 
@@ -352,7 +349,7 @@ Jika hanya perubahan UI:
 ## ⚠️ Troubleshooting
 
 ### Error: "Gagal terhubung ke server Google Sheets API"
-- Pastikan URL deployment di `GAS_API_URL` sudah benar
+- Pastikan aplikasi dibuka dari URL Web App Apps Script, bukan file HTML atau hosting statis langsung
 - Pastikan deployment sudah diaktifkan sebagai deployment utama
 - Pastikan akses diatur ke "Anyone"
 
@@ -375,11 +372,8 @@ Jika hanya perubahan UI:
 
 ## 📝 Catatan Penting
 
-### URL Deployment Setiap Deploy
-Setiap kali deploy baru, URL akan berubah. Pastikan:
-1. Copy URL deployment baru
-2. Update `GAS_API_URL` di `script/index.html`
-3. Push dan deploy ulang
+### URL Deployment
+Buka aplikasi dari URL Web App Apps Script. URL ini tidak perlu ditanam di `script/index.html`; jika memakai wrapper statis, URL hanya digunakan sebagai alamat iframe.
 
 ### Struktur Database Harus Konsisten
 Nama sheet dan kolom harus EXACT sama:
@@ -400,35 +394,73 @@ Fungsi `seedInitialData()` hanya untuk testing awal. Setelah production, jangan 
 
 ### Fitur Keamanan yang Diterapkan
 
-1. **LockService**
-   - Mencegah race condition saat pencoblosan
-   - Timeout 5-10 detik untuk operasi kritis
+1. **Password Hashing (SHA-256)**
+   - Password tidak disimpan dalam plaintext
+   - Menggunakan SHA-256 dengan salt untuk hashing
+   - Backward compatibility dengan password lama (migrasi otomatis)
 
-2. **Validasi NIK Unik**
+2. **Session-Based Authentication**
+   - Token session dengan expiry (default 120 menit)
+   - Session disimpan di PropertiesService (server-side)
+   - Auto-logout saat session kadaluarsa
+   - Session persistence di browser dengan localStorage
+
+3. **Rate Limiting**
+   - Maksimal 30 request per menit per client
+   - Maksimal 100 request per jam per client
+   - Menggunakan CacheService untuk tracking
+   - Mencegah brute force dan DDoS attack
+
+4. **Server-Side Authorization**
+   - Role validation di setiap endpoint
+   - Admin: Full access (CRUD lengkap)
+   - Staff: Hanya verifikasi & pencoblosan
+   - Tidak bisa bypass dengan direct API call
+
+5. **LockService**
+   - Mencegah race condition saat pencoblosan
+   - Timeout 30 detik untuk operasi kritis
+   - Anti-double vote dengan atomic operation
+
+6. **Validasi NIK Unik**
    - Cek duplikasi NIK per pemilihan (bukan global)
    - 1 NIK dapat terdaftar di beberapa pemilihan berbeda
    - Cek status pemilih sebelum vote
 
-3. **Audit Logging**
+7. **Audit Logging**
    - Log semua aktivitas sistem
    - Track user, timestamp, dan aksi
+   - Log error ke Stackdriver
    - Log tidak bisa dihapus oleh user biasa
 
-4. **Anti-Double Vote**
+8. **Anti-Double Vote**
    - Validasi status pemilih sebelum vote
    - Mencegah double vote pada pemilihan yang SAMA
    - Mengizinkan vote di pemilihan BERBEDA
    - Update status otomatis setelah vote
    - Validasi ganda di backend
 
-5. **Role-Based Access**
-   - Admin: Full access (CRUD lengkap)
-   - Staff: Hanya verifikasi & pencoblosan
-
-6. **Data Validation**
+9. **Data Validation**
    - Filter baris kosong/invalid di backend
    - Validasi input form di frontend
    - Error handling dengan try-catch
+   - Proper error logging untuk debugging
+
+10. **Access Control**
+    - Deploy dengan access: "MYSELF" (hanya deployer)
+    - Tidak bisa diakses publik tanpa authorization
+    - Client-specific access untuk production
+
+### Keamanan Tambahan yang Disarankan
+
+Untuk production environment, disarankan:
+- Gunakan domain-specific access di Apps Script
+- Implementasi 2FA untuk akun Admin
+- Encrypt data di Google Sheets (jika memungkinkan)
+- Regular backup database
+- Implementasi IP whitelisting
+- Gunakan HTTPS enforce
+- Monitor audit logs secara berkala
 
 ---
 
@@ -467,7 +499,19 @@ VTR-001    | ELC-2026-001 | 352501130795...| Muhammad Alvarisi| RT 01/RW 03| Bel
 
 ## 📝 Changelog
 
-### v1.2.0 (Terbaru)
+### v2.0.0 (Security Overhaul - Terbaru)
+- 🔒 **Password Hashing**: Implementasi SHA-256 hashing untuk password
+- 🔒 **Session Management**: Token-based authentication dengan expiry
+- 🔒 **Rate Limiting**: 30 req/min dan 100 req/hour per client
+- 🔒 **Server-Side Authorization**: Role validation di semua endpoint
+- 🔒 **Error Logging**: Log error ke Stackdriver dan audit logs
+- 🔒 **Access Control**: Ubah access dari ANYONE_ANONYMOUS ke MYSELF
+- 🔧 **LockService Timeout**: Naikkan dari 10s ke 30s untuk better concurrency
+- 🔧 **Session Persistence**: Auto-login dengan localStorage
+- 🐛 **Security Fix**: Hapus user_id/role dari payload frontend (gunakan session)
+- 🐛 **Security Fix**: Tambah client fingerprinting untuk rate limiting
+
+### v1.2.0
 - ✨ **Multi-Election Support**: 1 NIK dapat memilih di berbagai pemilihan berbeda
 - ✨ **CRUD Lengkap**: Tambah fitur Edit dan Hapus untuk kandidat dan DPT
 - ✨ **Multi-Chart Analytics**: Grafik perolehan suara terpisah untuk setiap pemilihan
