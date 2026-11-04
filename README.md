@@ -104,23 +104,7 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│              Project Structure (Repository)              │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ index.html (Wrapper/Frame)                         │ │
-│  │ - SEO metadata                                     │ │
-│  │ - Iframe ke script/index.html                      │ │
-│  └────────────────────────────────────────────────────┘ │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ script/                                           │ │
-│  │ ├── index.html (Frontend E-Voting)                │ │
-│  │ ├── Code.js (Backend Google Apps Script)          │ │
-│  │ ├── appsscript.json                               │ │
-│  │ └── .clasp.json                                  │ │
-│  └────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│              Frontend (script/index.html)                │
+│                     Frontend (index.html)                │
 │              - Login UI                                  │
 │              - Admin Dashboard                           │
 │              - Staff TPS Dashboard                       │
@@ -165,65 +149,171 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 
 ---
 
-## 📦 Instalasi
+## 📦 Instalasi & Setup Lengkap
 
-### Prasyarat
-- Akun Google
-- Node.js (untuk CLASP)
-- Google Sheets dengan struktur tabel
+### 📁 Struktur Project
 
-### Langkah 1: Setup Google Apps Script
+```
+e-votting/
+├── index.html              ← Wrapper/Frame untuk deployment (SEO metadata)
+├── script/                 ← Folder utama (untuk Google Apps Script)
+│   ├── Code.js            ← Backend (API handlers, business logic)
+│   ├── index.html         ← Frontend (UI lengkap e-voting)
+│   ├── appsscript.json     ← Konfigurasi Apps Script
+│   └── .clasp.json        ← Konfigurasi CLASP deployment
+├── README.md              ← Dokumentasi ini
+├── LICENSE                ← MIT License
+└── .gitignore             ← File yang diabaikan git
+```
+
+### 🚀 Panduan Setup untuk Akun Baru (Handover)
+
+#### Langkah 1: Clone Repository
+```bash
+git clone https://github.com/BotHunting/e-votting.git
+cd e-votting
+```
+
+#### Langkah 2: Setup Google Sheets
+
+1. Buka [Google Sheets](https://sheets.google.com/)
+2. Buat spreadsheet baru dengan nama: `e-voting-database`
+3. Buat 6 sheet dengan nama EXACT seperti ini:
+   - `Users`
+   - `Elections`
+   - `Candidates`
+   - `Voters_DPT`
+   - `Votes`
+   - `Audit_Logs`
+
+4. Setup header untuk setiap sheet:
+
+**Sheet `Users`:**
+```
+ID | Username | Password | Role | Nama_Petugas | Status
+```
+
+**Sheet `Elections`:**
+```
+ID_Pemilihan | Kategori | Tanggal | Status
+```
+
+**Sheet `Candidates`:**
+```
+ID_Kandidat | ID_Pemilihan | No_Urut | Nama_Kandidat | Foto_URL | Visi_Misi | Kandidat
+```
+
+**Sheet `Voters_DPT`:**
+```
+ID_Pemilih | ID_Pemilihan | NIK | Nama_Pemilih | RT_RW | Status_Memilih | ID_Staff_Verifikator
+```
+
+**Sheet `Votes`:**
+```
+ID_Vote | ID_Pemilihan | ID_Kandidat | Waktu_Mencoblos
+```
+
+**Sheet `Audit_Logs`:**
+```
+Timestamp | Account_ID | Role | Action_Type | Description | IP_UserAgent
+```
+
+#### Langkah 3: Setup Google Apps Script
 
 1. Buka [Google Apps Script](https://script.google.com/)
 2. Buat project baru
-3. Copy file `script/Code.js` dan `script/appsscript.json` ke project
-4. Setup Google Sheets dengan sheet berikut:
-   - `Users` - Data akun admin/staff
-   - `Elections` - Data pemilihan
-   - `Candidates` - Data kandidat (termasuk kolom Kandidat untuk jabatan)
-   - `Voters_DPT` - Data pemilih
-   - `Votes` - Data suara
-   - `Audit_Logs` - Log aktivitas
+3. Di project editor:
+   - Buat file `Code.js` (copy isi dari `script/Code.js`)
+   - Buat file `appsscript.json` (copy isi dari `script/appsscript.json`)
+   - Buat file `index.html` (copy isi dari `script/index.html`)
 
-### Langkah 2: Install CLASP
+4. Klik tombol **Add-ons** → **Sheets** (atau ikon sheets)
+5. Pilih spreadsheet yang dibuat di Langkah 2
+
+#### Langkah 4: Jalankan Fungsi Seed Data (Opsional)
+
+Untuk data testing awal:
+1. Di Google Apps Script Editor
+2. Pilih fungsi `seedInitialData` dari dropdown function
+3. Klik **Run**
+4. Spreadsheet akan otomatis terisi data dummy
+
+#### Langkah 5: Install CLASP (Opsional - untuk deployment via terminal)
 
 ```bash
 npm install -g @google/clasp
 ```
 
-### Langkah 3: Clone & Setup Project
+#### Langkah 6: Clone Project ke Lokal via CLASP
 
 ```bash
-# Clone repository
-git clone https://github.com/BotHunting/e-votting.git
-cd e-votting
-
-# Masuk ke folder script untuk backend deployment
 cd script
-
-# Login ke Google
 clasp login
-
-# Clone Apps Script project
-clasp clone <SCRIPT_ID>
-
-# Push file ke Apps Script
-clasp push
+clasp clone <SCRIPT_ID_FROM_APPS_SCRIPT_URL>
 ```
 
-### Langkah 4: Deploy sebagai Web App
+Script ID bisa didapat dari URL Apps Script, format:
+`https://script.google.com/d/<SCRIPT_ID>/edit`
 
+#### Langkah 7: Deploy sebagai Web App
+
+**Via Google Apps Script Console:**
+1. Klik **Deploy** → **New Deployment**
+2. Pilih type: **Web App**
+3. Description: "Deployment E-Voting v1.2.0"
+4. Execute as: **Me** (akun yang login)
+5. Who has access: **Anyone** (penting untuk akses publik)
+6. Klik **Deploy**
+7. Copy URL deployment yang muncul
+
+**Via Terminal (CLASP):**
 ```bash
-# Deploy
+cd script
+clasp deploy --description "Deployment E-Voting v1.2.0"
+```
+
+#### Langkah 8: Update URL di Frontend
+
+1. Copy URL deployment dari Langkah 7
+2. Buka file `script/index.html`
+3. Cari baris: `const GAS_API_URL = '...';`
+4. Ganti URL lama dengan URL deployment baru
+5. Push update via CLASP:
+```bash
+clasp push
 clasp deploy
 ```
 
-Atau via Google Apps Script Console:
-1. Klik **Deploy** → **New Deployment**
-2. Pilih type: **Web App**
-3. Execute as: **Me**
-4. Who has access: **Anyone**
-5. Klik **Deploy**
+#### Langkah 9: Update Wrapper (Root index.html)
+
+1. Buka file `index.html` di root
+2. Pastikan iframe src menunjuk ke `script/index.html`
+3. Deploy wrapper ke hosting Anda (Vercel, Netlify, GitHub Pages, dll)
+
+---
+
+## 🔄 Workflow Deployment
+
+### Deploy Perubahan Code
+
+1. Edit file di folder `script/`
+2. Push ke Google Apps Script:
+```bash
+cd script
+clasp push
+```
+3. Deploy:
+```bash
+clasp deploy --description "Deskripsi perubahan"
+```
+4. Arsipkan deployment lama via Google Apps Script Console
+
+### Update Frontend Tanpa Backend
+
+Jika hanya perubahan UI:
+1. Edit `script/index.html`
+2. Push dan deploy seperti biasa
+3. URL deployment tetap sama
 
 ---
 
@@ -259,7 +349,54 @@ Atau via Google Apps Script Console:
 
 ---
 
-## 🔒 Keamanan
+## ⚠️ Troubleshooting
+
+### Error: "Gagal terhubung ke server Google Sheets API"
+- Pastikan URL deployment di `GAS_API_URL` sudah benar
+- Pastikan deployment sudah diaktifkan sebagai deployment utama
+- Pastikan akses diatur ke "Anyone"
+
+### Error: Blank screen setelah login
+- Buka Console browser (F12) untuk cek error
+- Pastikan backend `doGet(e)` menampilkan HTML saat tanpa parameter
+- Pastikan Google Sheets sudah terhubung ke Apps Script
+
+### Error: "NIK tidak ditemukan dalam DPT"
+- Pastikan data di sheet `Voters_DPT` sudah ada
+- Pastikan NIK dan ID_Pemilihan match persis
+- Cek spasi/typo di NIK
+
+### Error: Deploy gagal via CLASP
+- Pastikan sudah login: `clasp login`
+- Pastikan `scriptId` di `.clasp.json` benar
+- Pastikan di folder `script/` saat menjalankan command
+
+---
+
+## 📝 Catatan Penting
+
+### URL Deployment Setiap Deploy
+Setiap kali deploy baru, URL akan berubah. Pastikan:
+1. Copy URL deployment baru
+2. Update `GAS_API_URL` di `script/index.html`
+3. Push dan deploy ulang
+
+### Struktur Database Harus Konsisten
+Nama sheet dan kolom harus EXACT sama:
+- Sheet: `Voters_DPT` (bukan `Voters` atau `DPT`)
+- Kolom: `ID_Pemilihan`, `NIK`, `Status_Memilih`, dll
+
+### Multi-Election Support
+- 1 NIK bisa terdaftar di beberapa pemilihan berbeda
+- Validasi double vote hanya per pemilihan yang SAMA
+- Di tabel DPT, kolom `Pemilihan` menunjukkan kategori pemilihan
+
+### Seed Data Hanya untuk Testing
+Fungsi `seedInitialData()` hanya untuk testing awal. Setelah production, jangan jalankan lagi karena akan menghapus semua data.
+
+---
+
+## 🔐 Keamanan
 
 ### Fitur Keamanan yang Diterapkan
 
