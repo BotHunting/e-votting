@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![E-Voting](https://img.shields.io/badge/version-2.1.0-green)
+![E-Voting](https://img.shields.io/badge/version-2.2.0-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-yellow)
 
@@ -28,10 +28,14 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 - 🛡️ **Anti-Double Vote** - Sistem lock untuk mencegah kecurangan
 - 📤 **Ekspor Data** - Excel dan PDF untuk dokumentasi
 - 🔄 **Multi-Election Support** - 1 NIK dapat memilih di berbagai pemilihan berbeda
-- ✏️ **CRUD Lengkap** - Kelola kandidat dan DPT dengan fitur tambah, edit, dan hapus
+- ✏️ **CRUD Lengkap** - Kelola kandidat, DPT, pemilihan, dan akun dengan fitur tambah, edit, dan hapus
 - 📥 **Bulk Import DPT** - Unggah ribuan data pemilih sekaligus via Excel/CSV
 - 🔍 **Pencarian & Filter DPT** - Search real-time NIK/nama, filter pemilihan/RT/RW, dan pagination
 - 📊 **Rincian DPT per Pemilihan** - Breakdown jumlah pemilih untuk tiap jenis pemilihan
+- 📍 **Multi-TPS Support** - Pembagian DPT per TPS dengan validasi Staff TPS
+- 📺 **Live Count Publik** - Dashboard publik real-time dengan auto-refresh 15 detik
+- 🔐 **Modal Verifikasi** - Konfirmasi sebelum buka bilik suara digital
+- 👥 **Manajemen Akun** - CRUD lengkap untuk Admin dan Staff dengan assignment TPS
 
 ---
 
@@ -43,9 +47,12 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 - Session management dan logout
 
 ### 👨‍💼 Dashboard Admin
-- **Manajemen Pemilihan**
+- **Manajemen Pemilihan (CRUD Lengkap)**
   - Buat pemilihan baru (Kepala Desa, RW, RT, BPD, dll)
+  - Edit data pemilihan
+  - Hapus pemilihan
   - Atur tanggal dan status pemilihan
+  - Dropdown kategori pemilihan
 
 - **Manajemen Kandidat (CRUD Lengkap)**
   - Tambah pasangan calon
@@ -54,20 +61,28 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
   - Upload foto kandidat
   - Input visi & misi
   - Atur nomor urut
-  - Input jabatan/lembaga (Kepala Desa, BPD, RW, RT)
+  - Input jabatan/lembaga (Kepala Desa, BPD, RW, RT) via dropdown
 
 - **Manajemen DPT (Daftar Pemilih Tetap)**
   - Tambah data pemilih baru
   - Edit data pemilih yang sudah ada
   - Hapus data pemilih
-  - Import massal DPT dari file Excel/CSV (kolom: NIK, Nama_Pemilih, RT, RW, ID_Pemilihan)
+  - Import massal DPT dari file Excel/CSV (kolom: NIK, Nama_Pemilih, RT, RW, ID_Pemilihan, TPS)
   - Input RT dan RW via dropdown (01–05) dengan format gabungan "RT xx / RW yy"
+  - Input TPS via dropdown (TPS 01-05)
   - Pencarian real-time berdasarkan NIK atau nama pemilih
-  - Filter berdasarkan pemilihan, RT, dan RW
+  - Filter berdasarkan pemilihan, RT, RW, dan TPS
   - Pagination data (10/25/50 per halaman)
   - Validasi NIK unik per pemilihan (mencegah duplikasi, termasuk saat import massal)
   - Tracking status pemilih
   - Tampilan kategori pemilihan di tabel DPT
+
+- **Manajemen Akun (CRUD Lengkap)**
+  - Tambah akun Admin dan Staff baru
+  - Edit data akun (username, password, role, status, TPS)
+  - Hapus akun (dengan proteksi untuk Admin utama)
+  - Assignment TPS untuk Staff
+  - Dropdown Role (Admin/Staff) dan Status (Aktif/Nonaktif)
 
 - **Real-time Analytics (Multi-Chart)**
   - Total DPT terdaftar (akumulasi semua pemilihan) beserta rincian per jenis pemilihan
@@ -75,6 +90,13 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
   - Tingkat partisipasi
   - Grafik perolehan suara terpisah untuk setiap pemilihan
   - Visualisasi data per kategori pemilihan
+
+- **Live Count Publik**
+  - Tab "Live Public" untuk memantau tampilan publik dari panel Admin
+  - Modal popup fullscreen dengan grafik real-time
+  - Auto-refresh 10 detik tanpa iframe (native components)
+  - Statistik: Total DPT, Suara Masuk, Partisipasi
+  - Grafik per kategori pemilihan
 
 - **Audit Log Security**
   - Log semua aktivitas sistem
@@ -86,11 +108,16 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
   - Export berita acara ke PDF
 
 ### 🗳️ Dashboard Staff TPS
+- **Badge TPS Assignment**
+  - Tampilkan lokasi TPS tugas Staff di header
+  - Filter DPT berdasarkan TPS Staff yang bertugas
+
 - **Verifikasi Pemilih**
   - Cek NIK dari DPT
   - Validasi status pemilih (belum/sudah memilih)
   - Notifikasi jika NIK tidak valid
   - Pilih agenda pemilihan dari dropdown
+  - Modal konfirmasi sebelum buka bilik suara (tampilkan NIK, Nama, RT/RW, TPS)
 
 - **Bilik Suara Digital**
   - Tampilan kandidat dengan foto
@@ -102,6 +129,7 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 - **Pencoblosan Aman**
   - Validasi NIK sebelum vote
   - Validasi NIK per pemilihan (support multi-election)
+  - Validasi TPS Staff vs TPS Pemilih
   - LockService mencegah double vote
   - Update status pemilih otomatis
   - Log audit untuk setiap vote
@@ -200,7 +228,7 @@ cd e-votting
 
 **Sheet `Users`:**
 ```
-ID | Username | Password | Role | Nama_Petugas | Status
+ID | Username | Password | Role | Nama_Petugas | Status | TPS
 ```
 
 **Sheet `Elections`:**
@@ -215,7 +243,7 @@ ID_Kandidat | ID_Pemilihan | No_Urut | Nama_Kandidat | Foto_URL | Visi_Misi | Ka
 
 **Sheet `Voters_DPT`:**
 ```
-ID_Pemilih | ID_Pemilihan | NIK | Nama_Pemilih | RT_RW | Status_Memilih | ID_Staff_Verifikator
+ID_Pemilih | ID_Pemilihan | NIK | Nama_Pemilih | RT_RW | Status_Memilih | ID_Staff_Verifikator | TPS
 ```
 
 **Sheet `Votes`:**
@@ -482,10 +510,11 @@ Untuk production environment, disarankan:
 
 ### Struktur Tabel Users
 ```
-ID      | Username  | Password | Role  | Nama_Petugas            | Status
---------|-----------|----------|-------|-------------------------|--------
-USR-001 | admin     | admin123 | Admin | Achmad Faris            | Aktif
-USR-002 | staff_tps1| staff123 | Staff | Petugas TPS 01          | Aktif
+ID      | Username  | Password | Role  | Nama_Petugas            | Status | TPS
+--------|-----------|----------|-------|-------------------------|--------|-------
+USR-001 | admin     | admin123 | Admin | Achmad Faris            | Aktif  | -
+USR-002 | staff_tps1| staff123 | Staff | Petugas TPS 01          | Aktif  | TPS 01
+USR-003 | staff_tps2| staff123 | Staff | Petugas TPS 02          | Aktif  | TPS 02
 ```
 
 ### Struktur Tabel Elections
@@ -512,6 +541,24 @@ VTR-001    | ELC-2026-001 | 352501130795...| Muhammad Alvarisi| RT 01/RW 03| Bel
 ---
 
 ## 📝 Changelog
+
+### v2.2.0 (Multi-TPS, Live Count Publik & UI Enhancements)
+- ✨ **Multi-TPS Support**: Pembagian DPT per TPS dengan kolom TPS di Users dan Voters_DPT
+- ✨ **Validasi TPS Staff**: Staff hanya dapat melayani pemilih di TPS yang ditugaskan
+- ✨ **CRUD Pemilihan Lengkap**: Tambah fitur Edit dan Hapus untuk Elections dengan dropdown kategori
+- ✨ **CRUD Akun Lengkap**: Manajemen akun Admin dan Staff dengan assignment TPS
+- ✨ **Live Count Publik**: Dashboard publik tanpa login dengan auto-refresh 15 detik
+- ✨ **Modal Live Public**: Popup fullscreen native (tanpa iframe) untuk Admin memantau tampilan publik
+- ✨ **Modal Verifikasi**: Konfirmasi sebelum buka bilik suara dengan tampilan data pemilih lengkap (NIK, Nama, RT/RW, TPS)
+- ✨ **Badge TPS Staff**: Tampilkan lokasi TPS tugas Staff di header dashboard
+- ✨ **Dropdown Konsisten**: Semua input kategori/jabatan/role menggunakan dropdown untuk konsistensi data
+- 🔧 **Hard-Reload Logout**: Logout melakukan hard-reload penuh untuk membersihkan session
+- 🔧 **Refresh Spesifik CRUD**: Setelah CRUD, hanya refresh data spesifik (bukan full reload) untuk performa
+- 🔧 **Error Handling Public.html**: Try-catch pada chart rendering dan data fetching
+- 🔧 **Protection Admin Utama**: Cegah penghapusan akun Admin utama (USR-001)
+- 🐛 **Bug Fix**: Perbaiki redeclaration variable electionIndex di Code.js
+- 🐛 **Bug Fix**: Perbaiki tab navigation untuk semua tab (elections, users, live)
+- 🐛 **Bug Fix**: Perbaiki payload conflict (role vs current_role) di CRUD operations
 
 ### v2.1.0 (Manajemen DPT & Integrasi Terbaru)
 - ✨ **Edit Data DPT**: Fitur update pemilih existing (`updateVoter`) dengan validasi NIK ganda per pemilihan

@@ -65,8 +65,11 @@
       <!-- Tab Buttons -->
       <div class="flex border-b border-slate-200 bg-white px-4 pt-3 rounded-t-xl space-x-4 text-sm font-medium">
         <button onclick="switchAdminTab('analytics')" id="tabBtn-analytics" class="py-2 border-b-2 border-indigo-600 text-indigo-600">Analytics & Hasil</button>
+        <button onclick="switchAdminTab('elections')" id="tabBtn-elections" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola Pemilihan</button>
         <button onclick="switchAdminTab('candidates')" id="tabBtn-candidates" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola Paslon</button>
         <button onclick="switchAdminTab('voters')" id="tabBtn-voters" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola DPT</button>
+        <button onclick="switchAdminTab('users')" id="tabBtn-users" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Kelola Akun</button>
+        <button onclick="switchAdminTab('live')" id="tabBtn-live" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Live Public</button>
         <button onclick="switchAdminTab('logs')" id="tabBtn-logs" class="py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700">Audit Log</button>
       </div>
 
@@ -90,7 +93,58 @@
         <div id="chartsContainer" class="space-y-6"></div>
       </div>
 
-      <!-- TAB 2: KELOLA PASLON / KANDIDAT -->
+      <!-- TAB 2: KELOLA PEMILIHAN -->
+      <div id="tabContent-elections" class="hidden space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border">
+          <h3 id="electionFormTitle" class="font-bold text-slate-800 mb-4">Tambah Pemilihan Baru</h3>
+          <form onsubmit="handleSaveElection(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="hidden" id="electionEditId">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori Pemilihan</label>
+              <select id="electionKategori" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">Pilih Kategori</option>
+                <option value="Pemilihan Kepala Desa (Kades)">Pemilihan Kepala Desa (Kades)</option>
+                <option value="Pemilihan Anggota BPD">Pemilihan Anggota BPD</option>
+                <option value="Pemilihan Ketua RW">Pemilihan Ketua RW</option>
+                <option value="Pemilihan Ketua RT">Pemilihan Ketua RT</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal</label>
+              <input type="date" id="electionTanggal" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select id="electionStatus" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="Aktif">Aktif</option>
+                <option value="Draft">Draft</option>
+                <option value="Selesai">Selesai</option>
+              </select>
+            </div>
+            <div class="md:col-span-3 flex justify-end space-x-2">
+              <button type="button" id="btnCancelElection" onclick="resetElectionForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
+              <button type="submit" id="btnAddElection" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Simpan Pemilihan</button>
+            </div>
+          </form>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border">
+          <h3 class="font-bold text-slate-800 mb-4">Daftar Pemilihan</h3>
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 border-b">
+                <th class="p-2">ID</th>
+                <th class="p-2">Kategori</th>
+                <th class="p-2">Tanggal</th>
+                <th class="p-2">Status</th>
+                <th class="p-2 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="electionTableBody" class="divide-y"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: KELOLA PASLON / KANDIDAT -->
       <div id="tabContent-candidates" class="hidden space-y-6">
         <!-- Form Tambah/Edit Paslon -->
         <div class="bg-white p-6 rounded-xl shadow-sm border">
@@ -111,7 +165,13 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan/Lembaga</label>
-              <input type="text" id="candJabatan" placeholder="Kepala Desa, BPD, RW, RT" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <select id="candJabatan" class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">Pilih Jabatan</option>
+                <option value="Kepala Desa">Kepala Desa</option>
+                <option value="Anggota BPD">Anggota BPD</option>
+                <option value="Ketua RW">Ketua RW</option>
+                <option value="Ketua RT">Ketua RT</option>
+              </select>
             </div>
             <div class="md:col-span-3">
               <label class="block text-xs font-semibold text-slate-600 mb-1">URL Foto (Gambar)</label>
@@ -147,7 +207,7 @@
         </div>
       </div>
 
-      <!-- TAB 3: KELOLA DPT -->
+      <!-- TAB 4: KELOLA DPT -->
       <div id="tabContent-voters" class="hidden space-y-6">
         <!-- Form Input DPT -->
         <div class="bg-white p-6 rounded-xl shadow-sm border">
@@ -186,7 +246,17 @@
                 <option value="05">05</option>
               </select>
             </div>
-            <div class="md:col-span-4 flex justify-end space-x-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">TPS</label>
+              <select id="voterTps" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="TPS 01" selected>TPS 01</option>
+                <option value="TPS 02">TPS 02</option>
+                <option value="TPS 03">TPS 03</option>
+                <option value="TPS 04">TPS 04</option>
+                <option value="TPS 05">TPS 05</option>
+              </select>
+            </div>
+            <div class="md:col-span-5 flex justify-end space-x-2">
               <button type="button" id="btnCancelVoter" onclick="resetVoterForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
               <button type="submit" id="btnAddVoter" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Simpan Data DPT</button>
             </div>
@@ -220,6 +290,7 @@
                 <th class="p-2">Nama Pemilih</th>
                 <th class="p-2">RT / RW</th>
                 <th class="p-2">Pemilihan</th>
+                <th class="p-2">TPS</th>
                 <th class="p-2">Status Memilih</th>
                 <th class="p-2 text-center">Aksi</th>
               </tr>
@@ -236,7 +307,75 @@
         </div>
       </div>
 
-      <!-- TAB 4: AUDIT LOGS -->
+      <!-- TAB 5: KELOLA AKUN -->
+      <div id="tabContent-users" class="hidden space-y-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border">
+          <h3 id="userFormTitle" class="font-bold text-slate-800 mb-4">Tambah Akun Baru</h3>
+          <form onsubmit="handleSaveUser(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input type="hidden" id="userEditId">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Username</label>
+              <input type="text" id="userUsername" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+              <input type="text" id="userPassword" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Petugas</label>
+              <input type="text" id="userNama" required class="w-full px-3 py-2 border rounded-lg text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Role</label>
+              <select id="userRole" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="Admin">Admin</option>
+                <option value="Staff">Staff</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+              <select id="userStatus" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="Aktif">Aktif</option>
+                <option value="Nonaktif">Nonaktif</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">TPS</label>
+              <select id="userTps" class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">-</option>
+                <option value="TPS 01">TPS 01</option>
+                <option value="TPS 02">TPS 02</option>
+                <option value="TPS 03">TPS 03</option>
+                <option value="TPS 04">TPS 04</option>
+                <option value="TPS 05">TPS 05</option>
+              </select>
+            </div>
+            <div class="md:col-span-3 flex justify-end space-x-2">
+              <button type="button" id="btnCancelUser" onclick="resetUserForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
+              <button type="submit" id="btnAddUser" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium">Simpan Akun</button>
+            </div>
+          </form>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border">
+          <h3 class="font-bold text-slate-800 mb-4">Daftar Akun Terdaftar</h3>
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 border-b">
+                <th class="p-2">ID</th>
+                <th class="p-2">Username</th>
+                <th class="p-2">Role</th>
+                <th class="p-2">Nama Petugas</th>
+                <th class="p-2">Status</th>
+                <th class="p-2">TPS</th>
+                <th class="p-2 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody" class="divide-y"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 6: AUDIT LOGS -->
       <div id="tabContent-logs" class="hidden bg-white p-6 rounded-xl shadow-sm border">
         <h3 class="font-bold text-slate-800 mb-4">Audit Log Kegiatan (Security History)</h3>
         <div class="overflow-x-auto">
@@ -254,13 +393,34 @@
           </table>
         </div>
       </div>
+
+      <!-- TAB 7: LIVE PUBLIC -->
+      <div id="tabContent-live" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
+          <div>
+            <h3 class="font-bold text-slate-900">Layar Live Count Publik</h3>
+            <p class="text-xs text-slate-500">Auto-refresh statistik & grafik secara real-time</p>
+          </div>
+          <button onclick="openPublicModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-lg font-medium flex items-center gap-2">🔍 Layar Penuh (Popup Modal)</button>
+        </div>
+        <div class="bg-white p-2 rounded-xl shadow-sm border overflow-hidden">
+          <iframe id="publicLiveIframe" src="" class="w-full h-[750px] border-0 rounded-lg bg-slate-50"></iframe>
+        </div>
+      </div>
     </div>
+
+
+
+  </div>
 
     <!-- STAFF / TPS DASHBOARD -->
     <div id="staffDashboard" class="hidden space-y-6">
-      <div class="bg-white p-4 rounded-xl shadow-sm border">
-        <h1 class="text-xl font-bold text-slate-900">Layar Pelayanan TPS</h1>
-        <p class="text-xs text-slate-500">Verifikasi NIK Pemilih sebelum membuka bilik suara digital</p>
+      <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Layar Pelayanan TPS</h1>
+          <p class="text-xs text-slate-500">Verifikasi NIK Pemilih sebelum membuka bilik suara digital</p>
+        </div>
+        <div id="staffTpsBadge" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"></div>
       </div>
 
       <!-- Verifikasi DPT -->
@@ -290,13 +450,56 @@
       </div>
     </div>
 
-  </div>
+    <!-- MODAL VERIFIKASI DPT -->
+    <div id="verifyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl shadow-lg max-w-md w-full mx-4 p-6">
+        <div class="text-center mb-4">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Data Pemilih Terverifikasi</h3>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-4 space-y-2 text-sm mb-4">
+          <div class="flex justify-between">
+            <span class="text-slate-600">Nama Pemilih:</span>
+            <span id="modalNama" class="font-medium text-slate-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">NIK:</span>
+            <span id="modalNik" class="font-medium text-slate-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">RT / RW:</span>
+            <span id="modalRtRw" class="font-medium text-slate-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">TPS:</span>
+            <span id="modalTps" class="font-medium text-slate-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Pemilihan:</span>
+            <span id="modalPemilihan" class="font-medium text-slate-900">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Status:</span>
+            <span class="font-medium text-green-600">Siap Memilih</span>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="closeVerifyModal()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 rounded-lg font-medium">Batal</button>
+          <button onclick="confirmOpenBallot()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium">Konfirmasi & Buka Bilik Suara</button>
+        </div>
+      </div>
+    </div>
 
   <script>
     let currentUser = null;
     let initialData = {};
     let chartInstance = null;
     let activeVoterNik = null;
+    let activeElectionId = null;
     let voterPage = 1;
 
     function apiRequest(action, payload = null, method = 'POST') {
@@ -351,7 +554,10 @@
 
     function logout() {
       currentUser = null;
-      location.reload();
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = window.location.href.split('?')[0];
+      window.location.reload(true);
     }
 
     // ==================== ADMIN LOGIC ====================
@@ -370,17 +576,25 @@
         console.error('Error di loadAdminDashboard:', error);
         alert('Terjadi kesalahan saat memuat dashboard. Silakan refresh halaman.');
       }
-      loadAuditLogs();
     }
 
     // Tab Switching
     function switchAdminTab(tabName) {
-      ['analytics', 'candidates', 'voters', 'logs'].forEach(t => {
+      ['analytics', 'elections', 'candidates', 'voters', 'users', 'logs', 'live'].forEach(t => {
         document.getElementById(`tabContent-${t}`).classList.add('hidden');
         document.getElementById(`tabBtn-${t}`).className = 'py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-700';
       });
       document.getElementById(`tabContent-${tabName}`).classList.remove('hidden');
       document.getElementById(`tabBtn-${tabName}`).className = 'py-2 border-b-2 border-indigo-600 text-indigo-600';
+
+      // Lazy load iframe for Live Public tab
+      if (tabName === 'live') {
+        const iframe = document.getElementById('publicLiveIframe');
+        if (iframe && !iframe.src) {
+          const baseUrl = window.location.href.split('?')[0];
+          iframe.src = baseUrl + '?page=live';
+        }
+      }
     }
 
     // Populate Dropdowns & Render Tables
@@ -415,6 +629,15 @@
       // Render Table DPT
       populateVoterFilters(initialData.voters || []);
       renderVoterTable();
+
+      // Render Table Elections
+      renderElectionsTable();
+
+      // Render Table Users
+      renderUsersTable();
+
+      // Render Audit Logs
+      renderAuditLogsTable();
     }
 
     function populateVoterFilters(voters) {
@@ -480,13 +703,14 @@
           <td class="p-2 font-semibold">${v.Nama_Pemilih}</td>
           <td class="p-2">${v.RT_RW}</td>
           <td class="p-2 text-xs text-slate-600">${getElectionCategory(v.ID_Pemilihan)}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800">${v.TPS || '-'}</span></td>
           <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${v.Status_Memilih === 'Sudah' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.Status_Memilih}</span></td>
           <td class="p-2 text-center space-x-1">
             <button onclick="editVoter('${v.ID_Pemilih}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
             <button onclick="deleteVoter('${v.ID_Pemilih}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
           </td>
         </tr>
-      `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-500">Tidak ada data DPT</td></tr>';
+      `).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-500">Tidak ada data DPT</td></tr>';
 
       const info = document.getElementById('voterPageInfo');
       if (info) info.innerText = `Menampilkan ${pageRows.length} dari ${filtered.length} data (Hal ${voterPage}/${totalPages})`;
@@ -604,14 +828,26 @@
       if (!confirm('Apakah Anda yakin ingin menghapus paslon ini?')) return;
       const res = await apiRequest('deleteCandidate', { id_kandidat: idKandidat, user_id: currentUser.id, role: currentUser.role });
       alert(res.message);
-      if (res.success) loadAdminDashboard();
+      if (res.success) {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.candidates = data.candidates;
+          renderAdminData();
+        }
+      }
     }
 
     async function deleteVoter(idPemilih) {
       if (!confirm('Apakah Anda yakin ingin menghapus DPT ini?')) return;
       const res = await apiRequest('deleteVoter', { id_pemilih: idPemilih, user_id: currentUser.id, role: currentUser.role });
       alert(res.message);
-      if (res.success) loadAdminDashboard();
+      if (res.success) {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.voters = data.voters;
+          renderAdminData();
+        }
+      }
     }
 
     async function handleAddVoter(e) {
@@ -634,7 +870,8 @@
         id_pemilihan: document.getElementById('voterElectionId').value,
         nik: document.getElementById('voterNik').value,
         nama: document.getElementById('voterName').value,
-        rt_rw: rtRwCombined
+        rt_rw: rtRwCombined,
+        tps: document.getElementById('voterTps').value
       };
 
       const res = await apiRequest(action, payload);
@@ -663,6 +900,8 @@
         setRtRwSelect('voterRw', rtRwParts[1].replace('RW ', '').trim());
       }
 
+      document.getElementById('voterTps').value = v.TPS || 'TPS 01';
+
       document.getElementById('voterFormTitle').innerText = 'Edit Data DPT';
       document.getElementById('btnAddVoter').innerText = 'Update Data DPT';
       document.getElementById('btnCancelVoter').classList.remove('hidden');
@@ -688,9 +927,202 @@
       document.getElementById('voterName').value = '';
       document.getElementById('voterRt').value = '01';
       document.getElementById('voterRw').value = '01';
+      document.getElementById('voterTps').value = 'TPS 01';
       document.getElementById('voterFormTitle').innerText = 'Tambah DPT Pemilih Baru';
       document.getElementById('btnAddVoter').innerText = 'Simpan Data DPT';
       document.getElementById('btnCancelVoter').classList.add('hidden');
+    }
+
+    async function handleCreateElection(e) {
+      e.preventDefault();
+      const payload = {
+        kategori: document.getElementById('electionKategori').value,
+        tanggal: document.getElementById('electionTanggal').value,
+        user_id: currentUser.id,
+        role: currentUser.role
+      };
+      const res = await apiRequest('createElection', payload);
+      alert(res.message);
+      if (res.success) {
+        document.getElementById('electionKategori').value = '';
+        document.getElementById('electionTanggal').value = '';
+        loadAdminDashboard();
+      }
+    }
+
+    function renderElectionsTable() {
+      const tbody = document.getElementById('electionTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = (initialData.elections || []).map(e => `
+        <tr>
+          <td class="p-2 font-mono text-xs">${e.ID_Pemilihan}</td>
+          <td class="p-2 font-semibold">${e.Kategori}</td>
+          <td class="p-2">${e.Tanggal}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${e.Status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${e.Status}</span></td>
+          <td class="p-2 text-center space-x-1">
+            <button onclick="editElection('${e.ID_Pemilihan}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
+            <button onclick="deleteElection('${e.ID_Pemilihan}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" class="p-4 text-center text-slate-500">Tidak ada pemilihan</td></tr>';
+    }
+
+    async function handleSaveElection(e) {
+      e.preventDefault();
+      const editId = document.getElementById('electionEditId').value;
+      const action = editId ? 'updateElection' : 'createElection';
+      
+      const payload = {
+        id_pemilihan: editId || null,
+        kategori: document.getElementById('electionKategori').value,
+        tanggal: document.getElementById('electionTanggal').value,
+        status: document.getElementById('electionStatus').value,
+        user_id: currentUser.id,
+        current_role: currentUser.role
+      };
+      
+      const res = await apiRequest(action, payload);
+      alert(res.message);
+      if (res.success) {
+        resetElectionForm();
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.elections = data.elections;
+          renderElectionsTable();
+        }
+      }
+    }
+
+    function editElection(idPemilihan) {
+      const e = initialData.elections.find(item => String(item.ID_Pemilihan) === String(idPemilihan));
+      if (!e) return;
+      
+      document.getElementById('electionEditId').value = e.ID_Pemilihan;
+      document.getElementById('electionKategori').value = e.Kategori;
+      document.getElementById('electionTanggal').value = e.Tanggal;
+      document.getElementById('electionStatus').value = e.Status;
+      
+      document.getElementById('electionFormTitle').innerText = 'Edit Data Pemilihan';
+      document.getElementById('btnAddElection').innerText = 'Update Pemilihan';
+      document.getElementById('btnCancelElection').classList.remove('hidden');
+      switchAdminTab('elections');
+    }
+
+    function resetElectionForm() {
+      document.getElementById('electionEditId').value = '';
+      document.getElementById('electionKategori').value = '';
+      document.getElementById('electionTanggal').value = '';
+      document.getElementById('electionStatus').value = 'Aktif';
+      document.getElementById('electionFormTitle').innerText = 'Tambah Pemilihan Baru';
+      document.getElementById('btnAddElection').innerText = 'Simpan Pemilihan';
+      document.getElementById('btnCancelElection').classList.add('hidden');
+    }
+
+    async function deleteElection(idPemilihan) {
+      if (!confirm('Apakah Anda yakin ingin menghapus pemilihan ini?')) return;
+      const res = await apiRequest('deleteElection', { id_pemilihan, user_id: currentUser.id, role: currentUser.role });
+      alert(res.message);
+      if (res.success) {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.elections = data.elections;
+          renderElectionsTable();
+        }
+      }
+    }
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('userTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = (initialData.users || []).map(u => `
+        <tr>
+          <td class="p-2 font-mono text-xs">${u.ID}</td>
+          <td class="p-2 font-semibold">${u.Username}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${u.Role === 'Admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-emerald-100 text-emerald-800'}">${u.Role}</span></td>
+          <td class="p-2">${u.Nama_Petugas}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${u.Status === 'Aktif' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${u.Status}</span></td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800">${u.TPS || '-'}</span></td>
+          <td class="p-2 text-center space-x-1">
+            <button onclick="editUser('${u.ID}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
+            <button onclick="deleteUser('${u.ID}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="7" class="p-4 text-center text-slate-500">Tidak ada akun</td></tr>';
+    }
+
+    async function handleSaveUser(e) {
+      e.preventDefault();
+      const editId = document.getElementById('userEditId').value;
+      const action = editId ? 'updateUser' : 'addUser';
+      
+      const payload = {
+        id_user: editId || null,
+        username: document.getElementById('userUsername').value,
+        password: document.getElementById('userPassword').value,
+        nama_petugas: document.getElementById('userNama').value,
+        role: document.getElementById('userRole').value,
+        status: document.getElementById('userStatus').value,
+        tps: document.getElementById('userTps').value,
+        user_id: currentUser.id,
+        current_role: currentUser.role
+      };
+      
+      const res = await apiRequest(action, payload);
+      alert(res.message);
+      if (res.success) {
+        resetUserForm();
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.users = data.users;
+          renderUsersTable();
+        }
+      }
+    }
+
+    function editUser(idUser) {
+      const u = initialData.users.find(item => String(item.ID) === String(idUser));
+      if (!u) return;
+      
+      document.getElementById('userEditId').value = u.ID;
+      document.getElementById('userUsername').value = u.Username;
+      document.getElementById('userPassword').value = u.Password;
+      document.getElementById('userNama').value = u.Nama_Petugas;
+      document.getElementById('userRole').value = u.Role;
+      document.getElementById('userStatus').value = u.Status;
+      document.getElementById('userTps').value = u.TPS || '';
+      
+      document.getElementById('userFormTitle').innerText = 'Edit Data Akun';
+      document.getElementById('btnAddUser').innerText = 'Update Akun';
+      document.getElementById('btnCancelUser').classList.remove('hidden');
+      switchAdminTab('users');
+    }
+
+    function resetUserForm() {
+      document.getElementById('userEditId').value = '';
+      document.getElementById('userUsername').value = '';
+      document.getElementById('userPassword').value = '';
+      document.getElementById('userNama').value = '';
+      document.getElementById('userRole').value = 'Staff';
+      document.getElementById('userStatus').value = 'Aktif';
+      document.getElementById('userTps').value = '';
+      document.getElementById('userFormTitle').innerText = 'Tambah Akun Baru';
+      document.getElementById('btnAddUser').innerText = 'Simpan Akun';
+      document.getElementById('btnCancelUser').classList.add('hidden');
+    }
+
+    async function deleteUser(idUser) {
+      if (!confirm('Apakah Anda yakin ingin menghapus akun ini?')) return;
+      const res = await apiRequest('deleteUser', { id_user: idUser, user_id: currentUser.id, role: currentUser.role });
+      alert(res.message);
+      if (res.success) {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          initialData.users = data.users;
+          renderUsersTable();
+        }
+      }
     }
 
     async function renderAllCharts() {
@@ -762,7 +1194,7 @@
       });
     }
 
-    async function loadAuditLogs() {
+    async function renderAuditLogsTable() {
       try {
         const res = await apiRequest('getAuditLogs', null, 'GET');
         if (res.success) {
@@ -782,7 +1214,7 @@
           }
         }
       } catch (error) {
-        console.error('Error di loadAuditLogs:', error);
+        console.error('Error di renderAuditLogsTable:', error);
       }
     }
 
@@ -792,6 +1224,13 @@
         const data = await apiRequest('getInitialData', null, 'GET');
         if (data.success) {
           initialData = data;
+          
+          // Show TPS badge
+          const tpsBadge = document.getElementById('staffTpsBadge');
+          if (tpsBadge) {
+            tpsBadge.textContent = currentUser.TPS || 'TPS -';
+          }
+          
           const select = document.getElementById('staffElectionSelect');
           if (select && data.elections && data.elections.length > 0) {
             select.innerHTML = data.elections.map(e => `<option value="${e.ID_Pemilihan}">${e.Kategori} (${e.Tanggal})</option>`).join('');
@@ -812,20 +1251,44 @@
       const nik = document.getElementById('voterNikInput').value.trim();
       const idPemilihan = document.getElementById('staffElectionSelect').value;
 
-      const voter = initialData.voters.find(v => String(v.NIK) === nik && String(v.ID_Pemilihan) === idPemilihan);
+      const voter = initialData.voters.find(v => 
+        String(v.NIK) === nik && 
+        String(v.ID_Pemilihan) === idPemilihan &&
+        (!currentUser.TPS || String(v.TPS) === currentUser.TPS)
+      );
 
       if (!voter) {
-        alert('NIK tidak ditemukan dalam DPT!');
+        alert('❌ NIK tidak ditemukan dalam DPT untuk pemilihan ini atau bukan wilayah TPS Anda!');
         return;
       }
 
       if (voter.Status_Memilih === 'Sudah') {
-        alert('PERINGATAN: NIK ini sudah menggunakan hak pilihnya!');
+        alert('❌ PERINGATAN: NIK ini sudah menggunakan hak pilihnya!');
         return;
       }
 
+      const election = initialData.elections.find(e => String(e.ID_Pemilihan) === idPemilihan);
+      
+      document.getElementById('modalNama').textContent = voter.Nama_Pemilih;
+      document.getElementById('modalNik').textContent = voter.NIK;
+      document.getElementById('modalRtRw').textContent = voter.RT_RW;
+      document.getElementById('modalTps').textContent = voter.TPS || '-';
+      document.getElementById('modalPemilihan').textContent = election ? election.Kategori : idPemilihan;
+      
+      document.getElementById('verifyModal').classList.remove('hidden');
       activeVoterNik = nik;
-      renderBallot(idPemilihan);
+      activeElectionId = idPemilihan;
+    }
+
+    function closeVerifyModal() {
+      document.getElementById('verifyModal').classList.add('hidden');
+      activeVoterNik = null;
+      activeElectionId = null;
+    }
+
+    function confirmOpenBallot() {
+      document.getElementById('verifyModal').classList.add('hidden');
+      renderBallot(activeElectionId);
     }
 
     function renderBallot(idPemilihan) {
@@ -852,7 +1315,8 @@
         nik: activeVoterNik,
         id_pemilihan: idPemilihan,
         id_kandidat: idKandidat,
-        staff_id: currentUser.id
+        staff_id: currentUser.id,
+        staff_tps: currentUser.TPS || ''
       };
 
       const res = await apiRequest('verifyAndSubmitVote', payload);
@@ -894,6 +1358,206 @@
 
       doc.save("Berita_Acara_EVoting.pdf");
     }
+
+    // Modal Functions
+    let liveModalInterval = null;
+    let modalChartInstances = {};
+
+    function openPublicModal() {
+      document.getElementById('publicModal').classList.remove('hidden');
+      updateLiveModalData();
+      liveModalInterval = setInterval(updateLiveModalData, 10000);
+    }
+
+    function closePublicModal() {
+      document.getElementById('publicModal').classList.add('hidden');
+      if (liveModalInterval) {
+        clearInterval(liveModalInterval);
+        liveModalInterval = null;
+      }
+      // Destroy chart instances
+      Object.keys(modalChartInstances).forEach(key => {
+        try {
+          modalChartInstances[key].destroy();
+        } catch (e) {
+          console.error('Error destroying modal chart:', e);
+        }
+      });
+      modalChartInstances = {};
+    }
+
+    async function updateLiveModalData() {
+      try {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          // Calculate totals
+          let totalDPT = 0;
+          let totalSuara = 0;
+          
+          data.elections.forEach(election => {
+            const electionDPT = (data.voters || []).filter(v => String(v.ID_Pemilihan) === String(election.ID_Pemilihan)).length;
+            totalDPT += electionDPT;
+            
+            const votes = (data.votes || []).filter(v => String(v.ID_Pemilihan) === String(election.ID_Pemilihan));
+            totalSuara += votes.length;
+          });
+          
+          const partisipasi = totalDPT > 0 ? ((totalSuara / totalDPT) * 100).toFixed(2) : 0;
+          
+          document.getElementById('modalStatTotalDPT').textContent = totalDPT;
+          document.getElementById('modalStatTotalSuara').textContent = totalSuara;
+          document.getElementById('modalStatPartisipasi').textContent = partisipasi + '%';
+          
+          // Render charts for each election
+          await renderModalCharts(data.elections);
+        }
+      } catch (error) {
+        console.error('Error updating live modal data:', error);
+      }
+    }
+
+    async function renderModalCharts(elections) {
+      const container = document.getElementById('modalChartsContainer');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      for (const election of elections) {
+        try {
+          const analytics = await apiRequest('getAnalytics', { id_pemilihan: election.ID_Pemilihan });
+          
+          if (analytics.success) {
+            const chartId = 'modal-chart-' + election.ID_Pemilihan;
+            
+            const chartHtml = `
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h5 class="font-bold text-slate-800 mb-3 text-sm">${election.Kategori}</h5>
+                <div class="h-48">
+                  <canvas id="${chartId}"></canvas>
+                </div>
+              </div>
+            `;
+            
+            container.innerHTML += chartHtml;
+            
+            // Render chart after DOM update
+            setTimeout(() => {
+              renderModalChart(chartId, analytics.results);
+            }, 100);
+          }
+        } catch (error) {
+          console.error('Error rendering modal chart for election:', election.ID_Pemilihan, error);
+        }
+      }
+    }
+
+    function renderModalChart(canvasId, results) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      
+      if (modalChartInstances[canvasId]) {
+        try {
+          modalChartInstances[canvasId].destroy();
+        } catch (e) {
+          console.error('Error destroying modal chart:', e);
+        }
+      }
+      
+      try {
+        const ctx = canvas.getContext('2d');
+        modalChartInstances[canvasId] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: results.map(r => `No. ${r.no_urut}`),
+            datasets: [{
+              label: 'Suara',
+              data: results.map(r => r.total_suara),
+              backgroundColor: [
+                'rgba(99, 102, 241, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(236, 72, 153, 0.8)',
+                'rgba(14, 165, 233, 0.8)'
+              ],
+              borderColor: [
+                'rgb(99, 102, 241)',
+                'rgb(34, 197, 94)',
+                'rgb(249, 115, 22)',
+                'rgb(236, 72, 153)',
+                'rgb(14, 165, 233)'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error creating modal chart:', error);
+      }
+    }
   </script>
+
+  <!-- MODAL POPUP LIVE PUBLIC FULLSCREEN (NATIVE) -->
+  <div id="publicModal" class="hidden fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <!-- Modal Header -->
+      <div class="flex justify-between items-center px-6 py-4 bg-slate-800 text-white border-b">
+        <div>
+          <h3 class="font-bold text-lg">Layar Live Count Publik (Mode Presentasi)</h3>
+          <p class="text-xs text-slate-300">Statistik Suara Real-time • Auto-refresh 10 detik</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <span id="livePulse" class="flex h-3 w-3 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <button onclick="closePublicModal()" class="text-slate-300 hover:text-white font-bold text-xl px-2">✕</button>
+        </div>
+      </div>
+      
+      <!-- Modal Body (Native Analytics View) -->
+      <div class="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+        <!-- Stats Summary Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
+            <p class="text-xs font-semibold text-slate-500 uppercase">Total DPT</p>
+            <p id="modalStatTotalDPT" class="text-3xl font-extrabold text-slate-800">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
+            <p class="text-xs font-semibold text-slate-500 uppercase">Suara Sah Masuk</p>
+            <p id="modalStatTotalSuara" class="text-3xl font-extrabold text-indigo-600">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 text-center">
+            <p class="text-xs font-semibold text-slate-500 uppercase">Tingkat Partisipasi</p>
+            <p id="modalStatPartisipasi" class="text-3xl font-extrabold text-emerald-600">0%</p>
+          </div>
+        </div>
+
+        <!-- Dynamic Multi-Chart Container -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h4 class="font-bold text-slate-800 mb-4 text-center text-lg">Perolehan Suara Per Kategori Pemilihan</h4>
+          <div id="modalChartsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Dynamic Canvas Charts Will Be Rendered Here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

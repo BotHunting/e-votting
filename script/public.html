@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Count - Sistem E-Voting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 min-h-screen">
+  <div class="container mx-auto p-4">
+    <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">Live Count Hasil Pemilihan</h1>
+          <p class="text-sm text-slate-500">Update otomatis setiap 15 detik</p>
+        </div>
+        <div class="text-right">
+          <div id="lastUpdate" class="text-xs text-slate-500">Terakhir diupdate: -</div>
+          <div class="flex items-center gap-2 mt-1">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-xs text-green-600 font-medium">Live</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="electionsContainer" class="space-y-6"></div>
+  </div>
+
+  <script>
+    let chartInstances = {};
+
+    function apiRequest(action, payload = null, method = 'POST') {
+      return new Promise((resolve) => {
+        if (!window.google || !google.script || !google.script.run) {
+          console.error('Google Script API tidak tersedia');
+          resolve({ success: false });
+          return;
+        }
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(() => {
+            console.error('Gagal terhubung ke server');
+            resolve({ success: false });
+          })
+          .handleApiRequest(action, payload || {}, method);
+      });
+    }
+
+    async function fetchData() {
+      try {
+        const data = await apiRequest('getInitialData', null, 'GET');
+        if (data.success) {
+          await renderElections(data.elections);
+          document.getElementById('lastUpdate').textContent = 'Terakhir diupdate: ' + new Date().toLocaleTimeString();
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    }
+
+    async function renderElections(elections) {
+      const container = document.getElementById('electionsContainer');
+      
+      if (!elections || elections.length === 0) {
+        container.innerHTML = '<div class="bg-white rounded-xl shadow-sm border p-6 text-center text-slate-500">Tidak ada data pemilihan</div>';
+        return;
+      }
+
+      for (const election of elections) {
+        try {
+          const analytics = await apiRequest('getAnalytics', { id_pemilihan: election.ID_Pemilihan });
+          
+          if (analytics.success) {
+            const existingCard = document.getElementById(`election-${election.ID_Pemilihan}`);
+            
+            const cardHtml = `
+              <div id="election-${election.ID_Pemilihan}" class="bg-white rounded-xl shadow-sm border p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-lg font-bold text-slate-900">${election.Kategori}</h2>
+                  <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">${election.Tanggal}</span>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                  <div class="bg-blue-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600">${analytics.summary.totalDPT}</div>
+                    <div class="text-xs text-slate-600">Total DPT</div>
+                  </div>
+                  <div class="bg-green-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600">${analytics.summary.totalVotesCast}</div>
+                    <div class="text-xs text-slate-600">Suara Masuk</div>
+                  </div>
+                  <div class="bg-purple-50 rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600">${analytics.summary.participationRate}</div>
+                    <div class="text-xs text-slate-600">Partisipasi</div>
+                  </div>
+                </div>
+                
+                <div class="h-64">
+                  <canvas id="chart-${election.ID_Pemilihan}"></canvas>
+                </div>
+              </div>
+            `;
+            
+            if (existingCard) {
+              existingCard.outerHTML = cardHtml;
+            } else {
+              container.innerHTML += cardHtml;
+            }
+            
+            renderChart(election.ID_Pemilihan, analytics.results);
+          }
+        } catch (error) {
+          console.error('Error rendering election:', election.ID_Pemilihan, error);
+        }
+      }
+    }
+
+    function renderChart(electionId, results) {
+      const canvas = document.getElementById(`chart-${electionId}`);
+      if (!canvas) return;
+      
+      if (chartInstances[electionId]) {
+        try {
+          chartInstances[electionId].destroy();
+        } catch (e) {
+          console.error('Error destroying chart:', e);
+        }
+      }
+      
+      try {
+        const ctx = canvas.getContext('2d');
+        chartInstances[electionId] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: results.map(r => `No. ${r.no_urut} - ${r.nama}`),
+            datasets: [{
+              label: 'Perolehan Suara',
+              data: results.map(r => r.total_suara),
+              backgroundColor: [
+                'rgba(99, 102, 241, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(236, 72, 153, 0.8)',
+                'rgba(14, 165, 233, 0.8)'
+              ],
+              borderColor: [
+                'rgb(99, 102, 241)',
+                'rgb(34, 197, 94)',
+                'rgb(249, 115, 22)',
+                'rgb(236, 72, 153)',
+                'rgb(14, 165, 233)'
+              ],
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error creating chart:', error);
+      }
+    }
+
+    window.onload = function() {
+      fetchData();
+      setInterval(fetchData, 15000);
+    };
+  </script>
+</body>
+</html>

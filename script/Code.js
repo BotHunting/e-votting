@@ -21,7 +21,16 @@ function doGet(e) {
     ));
   }
 
-  // 2. Jika diakses langsung via browser tanpa parameter -> Tampilkan Halaman Web UI (index.html)
+  // 2. Routing halaman berdasarkan parameter `page`
+  const page = e && e.parameter.page ? e.parameter.page : 'index';
+  
+  if (page === 'live') {
+    return HtmlService.createHtmlOutputFromFile('public')
+      .setTitle('Live Count Publik')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  // 3. Default: Render index.html (Login & Dashboard)
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Sistem E-Voting Pemilihan Lokal')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -64,6 +73,10 @@ function dispatchApiRequest(action, payload, method) {
         return handleLogin(payload);
       case 'createElection':
         return createElection(payload);
+      case 'updateElection':
+        return updateElection(payload);
+      case 'deleteElection':
+        return deleteElection(payload);
       case 'addCandidate':
         return addCandidate(payload);
       case 'updateCandidate':
@@ -80,6 +93,12 @@ function dispatchApiRequest(action, payload, method) {
         return deleteVoter(payload);
       case 'assignVoterToElection':
         return assignVoterToElection(payload);
+      case 'addUser':
+        return addUser(payload);
+      case 'updateUser':
+        return updateUser(payload);
+      case 'deleteUser':
+        return deleteUser(payload);
       case 'verifyAndSubmitVote':
         return verifyAndSubmitVote(payload);
       default:
@@ -149,7 +168,8 @@ function getVoterColumnIndexes(headers) {
     name: headers.indexOf('Nama_Pemilih'),
     rtRw: headers.indexOf('RT_RW'),
     status: headers.indexOf('Status_Memilih'),
-    staff: headers.indexOf('ID_Staff_Verifikator')
+    staff: headers.indexOf('ID_Staff_Verifikator'),
+    tps: headers.indexOf('TPS')
   };
   if (Object.values(indexes).some(index => index < 0)) {
     throw new Error('Kolom wajib pada sheet Voters_DPT tidak lengkap.');
@@ -189,7 +209,8 @@ function handleLogin(payload) {
         id: user.ID,
         username: user.Username,
         role,
-        nama: user.Nama_Petugas
+        nama: user.Nama_Petugas,
+        tps: user.TPS || ''
       }
     };
   }
@@ -209,6 +230,7 @@ function getInitialData() {
     elections: elections,
     candidates: getSheetData(SHEET_NAMES.CANDIDATES),
     voters: voters,
+    users: getSheetData(SHEET_NAMES.USERS),
     dptPerElection: dptPerElection
   };
 }
@@ -219,6 +241,42 @@ function createElection(payload) {
   sheet.appendRow([id, payload.kategori, payload.tanggal, 'Aktif']);
   writeAuditLog(payload.user_id, payload.role, 'CREATE_ELECTION', `Membuat pemilihan kategori: ${payload.kategori}`);
   return { success: true, message: 'Pemilihan baru berhasil dibuat' };
+}
+
+function updateElection(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.ELECTIONS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf('ID_Pemilihan');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idIndex]) === String(payload.id_pemilihan)) {
+      sheet.getRange(i + 1, headers.indexOf('Kategori') + 1).setValue(payload.kategori);
+      sheet.getRange(i + 1, headers.indexOf('Tanggal') + 1).setValue(payload.tanggal);
+      sheet.getRange(i + 1, headers.indexOf('Status') + 1).setValue(payload.status);
+      writeAuditLog(payload.user_id, payload.role, 'UPDATE_ELECTION', `Memperbarui Pemilihan ID: ${payload.id_pemilihan}`);
+      return { success: true, message: 'Data Pemilihan berhasil diperbarui!' };
+    }
+  }
+  return { success: false, message: 'Pemilihan tidak ditemukan!' };
+}
+
+function deleteElection(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.ELECTIONS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf('ID_Pemilihan');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idIndex]) === String(payload.id_pemilihan)) {
+      sheet.deleteRow(i + 1);
+      writeAuditLog(payload.user_id, payload.role, 'DELETE_ELECTION', `Menghapus Pemilihan ID: ${payload.id_pemilihan}`);
+      return { success: true, message: 'Pemilihan berhasil dihapus!' };
+    }
+  }
+  return { success: false, message: 'Pemilihan tidak ditemukan!' };
 }
 
 function addCandidate(payload) {
@@ -268,6 +326,7 @@ function addVoter(payload) {
     row[indexes.rtRw] = String(payload.rt_rw).trim();
     row[indexes.status] = 'Belum';
     row[indexes.staff] = '';
+    row[indexes.tps] = String(payload.tps || '').trim();
     const newRowNumber = sheet.getLastRow() + 1;
     sheet.getRange(newRowNumber, 1, 1, row.length).setValues([row]);
     sheet.getRange(newRowNumber, indexes.nik + 1).setNumberFormat('@').setValue(inputNik);
@@ -329,6 +388,7 @@ function updateVoter(payload) {
     sheet.getRange(sheetRow, indexes.nik + 1).setNumberFormat('@').setValue(nik);
     sheet.getRange(sheetRow, indexes.name + 1).setValue(name);
     sheet.getRange(sheetRow, indexes.rtRw + 1).setValue(rtRw);
+    sheet.getRange(sheetRow, indexes.tps + 1).setValue(String(payload.tps || '').trim());
     if (String(data[rowIndex][indexes.election]) !== electionId) {
       sheet.getRange(sheetRow, indexes.status + 1).setValue('Belum');
       sheet.getRange(sheetRow, indexes.staff + 1).setValue('');
@@ -396,6 +456,7 @@ function bulkAddVoters(payload) {
       row[indexes.rtRw] = rtRw;
       row[indexes.status] = 'Belum';
       row[indexes.staff] = '';
+      row[indexes.tps] = String(item.tps || '').trim();
       newRows.push(row);
     });
 
@@ -503,11 +564,14 @@ function verifyAndSubmitVote(payload) {
     const statusIndex = headers.indexOf('Status_Memilih');
     const staffIndex = headers.indexOf('ID_Staff_Verifikator');
     const electionIndex = headers.indexOf('ID_Pemilihan');
+    const tpsIndex = headers.indexOf('TPS');
 
     let rowIndex = -1;
+    let voterTps = null;
     for (let i = 1; i < votersData.length; i++) {
       if (String(votersData[i][nikIndex]) === String(payload.nik) && String(votersData[i][electionIndex]) === String(payload.id_pemilihan)) {
         rowIndex = i + 1;
+        voterTps = votersData[i][tpsIndex];
         if (votersData[i][statusIndex] === 'Sudah') {
           return { success: false, message: 'PERINGATAN: NIK ini sudah menggunakan hak pilihnya!' };
         }
@@ -517,6 +581,11 @@ function verifyAndSubmitVote(payload) {
 
     if (rowIndex === -1) {
       return { success: false, message: 'NIK tidak terdaftar dalam DPT!' };
+    }
+
+    // Validasi TPS (jika staff memiliki TPS assignment)
+    if (payload.staff_tps && voterTps && String(payload.staff_tps) !== String(voterTps)) {
+      return { success: false, message: 'Anda tidak berwenang melayani pemilih di TPS ini!' };
     }
 
     votersSheet.getRange(rowIndex, statusIndex + 1).setValue('Sudah');
@@ -615,6 +684,60 @@ function deleteCandidate(payload) {
 }
 
 /**
+ * CRUD USERS
+ */
+function addUser(payload) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAMES.USERS);
+  const id = 'USR-' + Date.now();
+  sheet.appendRow([id, payload.username, payload.password, String(payload.role || '').trim(), payload.nama_petugas, payload.status, payload.tps || '']);
+  writeAuditLog(payload.user_id, payload.role, 'ADD_USER', `Menambahkan User: ${payload.username} (${payload.role})`);
+  return { success: true, message: 'Akun berhasil ditambahkan!' };
+}
+
+function updateUser(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.USERS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf('ID');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idIndex]) === String(payload.id_user)) {
+      sheet.getRange(i + 1, headers.indexOf('Username') + 1).setValue(payload.username);
+      sheet.getRange(i + 1, headers.indexOf('Password') + 1).setValue(payload.password);
+      sheet.getRange(i + 1, headers.indexOf('Role') + 1).setValue(String(payload.role || '').trim());
+      sheet.getRange(i + 1, headers.indexOf('Nama_Petugas') + 1).setValue(payload.nama_petugas);
+      sheet.getRange(i + 1, headers.indexOf('Status') + 1).setValue(payload.status);
+      sheet.getRange(i + 1, headers.indexOf('TPS') + 1).setValue(payload.tps || '');
+      writeAuditLog(payload.user_id, payload.role, 'UPDATE_USER', `Memperbarui Akun ID: ${payload.id_user} (Role: ${payload.role}, TPS: ${payload.tps || '-'})`);
+      return { success: true, message: 'Data Akun berhasil diperbarui!' };
+    }
+  }
+  return { success: false, message: 'Akun tidak ditemukan!' };
+}
+
+function deleteUser(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAMES.USERS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf('ID');
+
+  if (String(payload.id_user) === 'USR-001') {
+    return { success: false, message: 'Tidak dapat menghapus akun Admin utama!' };
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idIndex]) === String(payload.id_user)) {
+      sheet.deleteRow(i + 1);
+      writeAuditLog(payload.user_id, payload.role, 'DELETE_USER', `Menghapus User ID: ${payload.id_user}`);
+      return { success: true, message: 'Akun berhasil dihapus!' };
+    }
+  }
+  return { success: false, message: 'Akun tidak ditemukan!' };
+}
+
+/**
  * CRUD VOTERS
  */
 function deleteVoter(payload) {
@@ -649,10 +772,10 @@ function seedInitialData() {
 
   const usersSheet = getOrCreateSheet(ss, SHEET_NAMES.USERS);
   usersSheet.clear();
-  usersSheet.appendRow(['ID', 'Username', 'Password', 'Role', 'Nama_Petugas', 'Status']);
-  usersSheet.appendRow(['USR-001', 'admin', 'admin123', 'Admin', 'Achmad Faris (Panitia Core)', 'Aktif']);
-  usersSheet.appendRow(['USR-002', 'staff_tps1', 'staff123', 'Staff', 'Petugas TPS 01 (Desa)', 'Aktif']);
-  usersSheet.appendRow(['USR-003', 'staff_tps2', 'staff123', 'Staff', 'Petugas TPS 02 (Desa)', 'Aktif']);
+  usersSheet.appendRow(['ID', 'Username', 'Password', 'Role', 'Nama_Petugas', 'Status', 'TPS']);
+  usersSheet.appendRow(['USR-001', 'admin', 'admin123', 'Admin', 'Achmad Faris (Panitia Core)', 'Aktif', '']);
+  usersSheet.appendRow(['USR-002', 'staff_tps1', 'staff123', 'Staff', 'Petugas TPS 01 (Desa)', 'Aktif', 'TPS 01']);
+  usersSheet.appendRow(['USR-003', 'staff_tps2', 'staff123', 'Staff', 'Petugas TPS 02 (Desa)', 'Aktif', 'TPS 02']);
 
   const electionsSheet = getOrCreateSheet(ss, SHEET_NAMES.ELECTIONS);
   electionsSheet.clear();
@@ -662,14 +785,15 @@ function seedInitialData() {
 
   const candidatesSheet = getOrCreateSheet(ss, SHEET_NAMES.CANDIDATES);
   candidatesSheet.clear();
-  candidatesSheet.appendRow(['ID_Kandidat', 'ID_Pemilihan', 'No_Urut', 'Nama_Kandidat', 'Foto_URL', 'Visi_Misi']);
+  candidatesSheet.appendRow(['ID_Kandidat', 'ID_Pemilihan', 'No_Urut', 'Nama_Kandidat', 'Foto_URL', 'Visi_Misi', 'Kandidat']);
   candidatesSheet.appendRow([
     'CND-001',
     'ELC-2026-001',
     1,
     'H. Ahmad Dahlan, S.T.',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    'Visi: Mewujudkan Desa Digital Mandiri dan Transparan.\nMisi: Digitalisasi pelayanan umum dan peningkatan UMKM.'
+    'Visi: Mewujudkan Desa Digital Mandiri dan Transparan.\nMisi: Digitalisasi pelayanan umum dan peningkatan UMKM.',
+    'Kepala Desa'
   ]);
   candidatesSheet.appendRow([
     'CND-002',
@@ -677,7 +801,8 @@ function seedInitialData() {
     2,
     'Budi Santoso, S.Pd.',
     'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300',
-    'Visi: Desa Sejahtera, Gotong Royong, dan Berkelanjutan.\nMisi: Peningkatan sarana olahraga & ruang hijau.'
+    'Visi: Desa Sejahtera, Gotong Royong, dan Berkelanjutan.\nMisi: Peningkatan sarana olahraga & ruang hijau.',
+    'Kepala Desa'
   ]);
   candidatesSheet.appendRow([
     'CND-003',
@@ -685,17 +810,18 @@ function seedInitialData() {
     3,
     'Siti Nurhaliza, S.E.',
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300',
-    'Visi: Pemberdayaan Perempuan dan Ekonomi Kreatif Desa.\nMisi: Pelatihan keterampilan dan bantuan modal usaha.'
+    'Visi: Pemberdayaan Perempuan dan Ekonomi Kreatif Desa.\nMisi: Pelatihan keterampilan dan bantuan modal usaha.',
+    'Kepala Desa'
   ]);
 
   const votersSheet = getOrCreateSheet(ss, SHEET_NAMES.VOTERS);
   votersSheet.clear();
-  votersSheet.appendRow(['ID_Pemilih', 'ID_Pemilihan', 'NIK', 'Nama_Pemilih', 'RT_RW', 'Status_Memilih', 'ID_Staff_Verifikator']);
-  votersSheet.appendRow(['VTR-001', 'ELC-2026-001', '3525011307950001', 'Muhammad Alvarisi', 'RT 01 / RW 03', 'Belum', '']);
-  votersSheet.appendRow(['VTR-002', 'ELC-2026-001', '3525011307950002', 'Arifah Zain', 'RT 01 / RW 03', 'Belum', '']);
-  votersSheet.appendRow(['VTR-003', 'ELC-2026-001', '3525011307950003', 'Mohammad Sahri', 'RT 02 / RW 03', 'Belum', '']);
-  votersSheet.appendRow(['VTR-004', 'ELC-2026-001', '3525011307950004', 'Deni Estu Prasetyo', 'RT 02 / RW 03', 'Belum', '']);
-  votersSheet.appendRow(['VTR-005', 'ELC-2026-001', '3525011307950005', 'Intan Vindia Kumala', 'RT 03 / RW 03', 'Belum', '']);
+  votersSheet.appendRow(['ID_Pemilih', 'ID_Pemilihan', 'NIK', 'Nama_Pemilih', 'RT_RW', 'Status_Memilih', 'ID_Staff_Verifikator', 'TPS']);
+  votersSheet.appendRow(['VTR-001', 'ELC-2026-001', '3525011307950001', 'Muhammad Alvarisi', 'RT 01 / RW 03', 'Belum', '', 'TPS 01']);
+  votersSheet.appendRow(['VTR-002', 'ELC-2026-001', '3525011307950002', 'Arifah Zain', 'RT 01 / RW 03', 'Belum', '', 'TPS 01']);
+  votersSheet.appendRow(['VTR-003', 'ELC-2026-001', '3525011307950003', 'Mohammad Sahri', 'RT 02 / RW 03', 'Belum', '', 'TPS 02']);
+  votersSheet.appendRow(['VTR-004', 'ELC-2026-001', '3525011307950004', 'Deni Estu Prasetyo', 'RT 02 / RW 03', 'Belum', '', 'TPS 02']);
+  votersSheet.appendRow(['VTR-005', 'ELC-2026-001', '3525011307950005', 'Intan Vindia Kumala', 'RT 03 / RW 03', 'Belum', '', 'TPS 03']);
 
   const votesSheet = getOrCreateSheet(ss, SHEET_NAMES.VOTES);
   votesSheet.clear();
