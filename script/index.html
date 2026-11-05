@@ -76,6 +76,7 @@
           <div class="bg-white p-4 rounded-xl shadow-sm border text-center">
             <p class="text-xs text-slate-500">Total DPT</p>
             <p id="statTotalDPT" class="text-2xl font-bold text-slate-800">0</p>
+            <div id="dptBreakdown" class="mt-2 text-[10px] text-slate-500 space-y-0.5"></div>
           </div>
           <div class="bg-white p-4 rounded-xl shadow-sm border text-center">
             <p class="text-xs text-slate-500">Suara Masuk</p>
@@ -167,11 +168,23 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">RT</label>
-              <input type="text" id="voterRt" required placeholder="01" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <select id="voterRt" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="01" selected>01</option>
+                <option value="02">02</option>
+                <option value="03">03</option>
+                <option value="04">04</option>
+                <option value="05">05</option>
+              </select>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">RW</label>
-              <input type="text" id="voterRw" required placeholder="03" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <select id="voterRw" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="01" selected>01</option>
+                <option value="02">02</option>
+                <option value="03">03</option>
+                <option value="04">04</option>
+                <option value="05">05</option>
+              </select>
             </div>
             <div class="md:col-span-4 flex justify-end space-x-2">
               <button type="button" id="btnCancelVoter" onclick="resetVoterForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
@@ -182,7 +195,24 @@
 
         <!-- Tabel Daftar DPT -->
         <div class="bg-white p-6 rounded-xl shadow-sm border overflow-x-auto">
-          <h3 class="font-bold text-slate-800 mb-4">Daftar Pemilih Tetap (DPT)</h3>
+          <div class="flex flex-wrap justify-between items-center mb-4 gap-2">
+            <h3 class="font-bold text-slate-800">Daftar Pemilih Tetap (DPT)</h3>
+            <div>
+              <input type="file" id="voterImportFile" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleVoterImport(event)">
+              <button type="button" onclick="document.getElementById('voterImportFile').click()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded font-medium">Import DPT (Excel/CSV)</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <input type="text" id="voterSearchInput" oninput="onVoterFilterChange()" placeholder="Cari NIK atau Nama Pemilih..." class="px-3 py-2 border rounded-lg text-sm flex-1 min-w-[200px]">
+            <select id="voterFilterElection" onchange="onVoterFilterChange()" class="px-3 py-2 border rounded-lg text-sm"></select>
+            <select id="voterFilterRt" onchange="onVoterFilterChange()" class="px-3 py-2 border rounded-lg text-sm"></select>
+            <select id="voterFilterRw" onchange="onVoterFilterChange()" class="px-3 py-2 border rounded-lg text-sm"></select>
+            <select id="voterPageSize" onchange="onVoterFilterChange()" class="px-3 py-2 border rounded-lg text-sm">
+              <option value="10">10 / halaman</option>
+              <option value="25">25 / halaman</option>
+              <option value="50">50 / halaman</option>
+            </select>
+          </div>
           <table class="w-full text-left text-xs border-collapse">
             <thead>
               <tr class="bg-slate-100 text-slate-600 border-b">
@@ -196,6 +226,13 @@
             </thead>
             <tbody id="voterTableBody" class="divide-y"></tbody>
           </table>
+          <div class="flex justify-between items-center mt-4 text-xs text-slate-600">
+            <span id="voterPageInfo"></span>
+            <div class="space-x-2">
+              <button type="button" id="voterPrevBtn" onclick="changeVoterPage(-1)" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded disabled:opacity-50">Sebelumnya</button>
+              <button type="button" id="voterNextBtn" onclick="changeVoterPage(1)" class="bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded disabled:opacity-50">Berikutnya</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -256,31 +293,27 @@
   </div>
 
   <script>
-    // GANTI DENGAN URL WEB APP APPS SCRIPT ANDA
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzC-v7LjNzcvDnlN_K4R4-KGel5bhE6Qm8nN_qJwicWZV2Y0qzRLLrzW5qEH6ME2jO4/exec';
-
     let currentUser = null;
     let initialData = {};
     let chartInstance = null;
     let activeVoterNik = null;
+    let voterPage = 1;
 
-    async function apiRequest(action, payload = null, method = 'POST') {
-      try {
-        let response;
-        if (method === 'GET') {
-          response = await fetch(`${GAS_API_URL}?action=${action}`);
-        } else {
-          response = await fetch(GAS_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action, payload })
-          });
+    function apiRequest(action, payload = null, method = 'POST') {
+      return new Promise((resolve) => {
+        if (!window.google || !google.script || !google.script.run) {
+          alert('Halaman harus dibuka melalui URL Web App Google Apps Script.');
+          resolve({ success: false });
+          return;
         }
-        return await response.json();
-      } catch (e) {
-        alert('Gagal terhubung ke server Google Sheets API.');
-        return { success: false };
-      }
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(() => {
+            alert('Gagal terhubung ke server Google Sheets API.');
+            resolve({ success: false });
+          })
+          .handleApiRequest(action, payload || {}, method);
+      });
     }
 
     async function handleLogin(e) {
@@ -380,29 +413,139 @@
       }
 
       // Render Table DPT
-      const voters = initialData.voters || [];
-      const voterTbody = document.getElementById('voterTableBody');
-      if (voterTbody) {
-        // Get election category from initialData
-        const getElectionCategory = (idPemilihan) => {
-          const election = initialData.elections?.find(e => String(e.ID_Pemilihan) === String(idPemilihan));
-          return election ? election.Kategori : idPemilihan;
-        };
+      populateVoterFilters(initialData.voters || []);
+      renderVoterTable();
+    }
 
-        voterTbody.innerHTML = voters.map(v => `
-          <tr>
-            <td class="p-2 font-mono">${v.NIK}</td>
-            <td class="p-2 font-semibold">${v.Nama_Pemilih}</td>
-            <td class="p-2">${v.RT_RW}</td>
-            <td class="p-2 text-xs text-slate-600">${getElectionCategory(v.ID_Pemilihan)}</td>
-            <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${v.Status_Memilih === 'Sudah' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.Status_Memilih}</span></td>
-            <td class="p-2 text-center space-x-1">
-              <button onclick="editVoter('${v.ID_Pemilih}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
-              <button onclick="deleteVoter('${v.ID_Pemilih}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
-            </td>
-          </tr>
-        `).join('');
+    function populateVoterFilters(voters) {
+      const elElect = document.getElementById('voterFilterElection');
+      const elRt = document.getElementById('voterFilterRt');
+      const elRw = document.getElementById('voterFilterRw');
+      if (!elElect || !elRt || !elRw) return;
+
+      const prevElect = elElect.value, prevRt = elRt.value, prevRw = elRw.value;
+      elElect.innerHTML = '<option value="">Semua Pemilihan</option>' +
+        (initialData.elections || []).map(e => `<option value="${e.ID_Pemilihan}">${e.Kategori}</option>`).join('');
+
+      const rtSet = new Set(), rwSet = new Set();
+      voters.forEach(v => {
+        const m = String(v.RT_RW || '').match(/RT\s*([^\s/]+)\s*\/\s*RW\s*(\S+)/);
+        if (m) { rtSet.add(m[1]); rwSet.add(m[2]); }
+      });
+      elRt.innerHTML = '<option value="">Semua RT</option>' + [...rtSet].sort().map(rt => `<option value="${rt}">RT ${rt}</option>`).join('');
+      elRw.innerHTML = '<option value="">Semua RW</option>' + [...rwSet].sort().map(rw => `<option value="${rw}">RW ${rw}</option>`).join('');
+
+      elElect.value = prevElect; elRt.value = prevRt; elRw.value = prevRw;
+    }
+
+    function parseRtRw(rtRw) {
+      const m = String(rtRw || '').match(/RT\s*([^\s/]+)\s*\/\s*RW\s*(\S+)/);
+      return m ? { rt: m[1], rw: m[2] } : { rt: '', rw: '' };
+    }
+
+    function renderVoterTable() {
+      const voters = initialData.voters || [];
+      const tbody = document.getElementById('voterTableBody');
+      if (!tbody) return;
+
+      const search = (document.getElementById('voterSearchInput')?.value || '').trim().toLowerCase();
+      const fElect = document.getElementById('voterFilterElection')?.value || '';
+      const fRt = document.getElementById('voterFilterRt')?.value || '';
+      const fRw = document.getElementById('voterFilterRw')?.value || '';
+
+      const filtered = voters.filter(v => {
+        if (search && !String(v.NIK).toLowerCase().includes(search) && !String(v.Nama_Pemilih).toLowerCase().includes(search)) return false;
+        if (fElect && String(v.ID_Pemilihan) !== String(fElect)) return false;
+        if (fRt || fRw) {
+          const { rt, rw } = parseRtRw(v.RT_RW);
+          if (fRt && rt !== fRt) return false;
+          if (fRw && rw !== fRw) return false;
+        }
+        return true;
+      });
+
+      const pageSize = parseInt(document.getElementById('voterPageSize')?.value || '10', 10);
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      voterPage = Math.min(Math.max(1, voterPage), totalPages);
+      const pageRows = filtered.slice((voterPage - 1) * pageSize, voterPage * pageSize);
+
+      const getElectionCategory = (idPemilihan) => {
+        const election = (initialData.elections || []).find(e => String(e.ID_Pemilihan) === String(idPemilihan));
+        return election ? election.Kategori : idPemilihan;
+      };
+
+      tbody.innerHTML = pageRows.map(v => `
+        <tr>
+          <td class="p-2 font-mono">${v.NIK}</td>
+          <td class="p-2 font-semibold">${v.Nama_Pemilih}</td>
+          <td class="p-2">${v.RT_RW}</td>
+          <td class="p-2 text-xs text-slate-600">${getElectionCategory(v.ID_Pemilihan)}</td>
+          <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${v.Status_Memilih === 'Sudah' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.Status_Memilih}</span></td>
+          <td class="p-2 text-center space-x-1">
+            <button onclick="editVoter('${v.ID_Pemilih}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
+            <button onclick="deleteVoter('${v.ID_Pemilih}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" class="p-4 text-center text-slate-500">Tidak ada data DPT</td></tr>';
+
+      const info = document.getElementById('voterPageInfo');
+      if (info) info.innerText = `Menampilkan ${pageRows.length} dari ${filtered.length} data (Hal ${voterPage}/${totalPages})`;
+      const prev = document.getElementById('voterPrevBtn');
+      const next = document.getElementById('voterNextBtn');
+      if (prev) prev.disabled = voterPage <= 1;
+      if (next) next.disabled = voterPage >= totalPages;
+    }
+
+    function onVoterFilterChange() {
+      voterPage = 1;
+      renderVoterTable();
+    }
+
+    function changeVoterPage(delta) {
+      voterPage += delta;
+      renderVoterTable();
+    }
+
+    async function handleVoterImport(e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const items = rows.slice(1).map(r => {
+        const nikRaw = r[0];
+        return {
+          nik: (typeof nikRaw === 'number' ? String(Math.trunc(nikRaw)) : String(nikRaw ?? '')).trim(),
+          nama: String(r[1] ?? '').trim(),
+          rt: String(r[2] ?? '').trim(),
+          rw: String(r[3] ?? '').trim(),
+          id_pemilihan: String(r[4] ?? '').trim()
+        };
+      }).filter(d => d.nik || d.nama || d.id_pemilihan);
+
+      if (!items.length) {
+        alert('File tidak berisi data DPT yang valid. Pastikan format kolom: NIK | Nama_Pemilih | RT | RW | ID_Pemilihan');
+        return;
       }
+
+      const preview = items.slice(0, 5)
+        .map(d => `${d.nik} | ${d.nama} | RT ${d.rt} / RW ${d.rw} | ${d.id_pemilihan}`)
+        .join('\n');
+      const ok = confirm(`Preview ${items.length} baris data (5 pertama):\n\n${preview}\n${items.length > 5 ? '\n...' : ''}\n\nFormat RT/RW akan digabung menjadi "RT xx / RW yy". Lanjutkan import?`);
+      if (!ok) return;
+
+      const voters = items.map(d => ({
+        nik: d.nik,
+        nama: d.nama,
+        rt_rw: `RT ${d.rt} / RW ${d.rw}`,
+        id_pemilihan: d.id_pemilihan
+      }));
+
+      const res = await apiRequest('bulkAddVoters', { voters, user_id: currentUser.id, role: currentUser.role });
+      alert(res.message);
+      if (res.success) loadAdminDashboard();
     }
 
     // Simpan / Edit Candidate
@@ -514,10 +657,10 @@
       document.getElementById('voterNik').value = v.NIK;
       document.getElementById('voterName').value = v.Nama_Pemilih;
       
-      const rtRwParts = v.RT_RW.split(' / ');
+      const rtRwParts = String(v.RT_RW || '').split(' / ');
       if (rtRwParts.length === 2) {
-        document.getElementById('voterRt').value = rtRwParts[0].replace('RT ', '');
-        document.getElementById('voterRw').value = rtRwParts[1].replace('RW ', '');
+        setRtRwSelect('voterRt', rtRwParts[0].replace('RT ', '').trim());
+        setRtRwSelect('voterRw', rtRwParts[1].replace('RW ', '').trim());
       }
 
       document.getElementById('voterFormTitle').innerText = 'Edit Data DPT';
@@ -526,13 +669,25 @@
       switchAdminTab('voters');
     }
 
+    function setRtRwSelect(id, value) {
+      const sel = document.getElementById(id);
+      sel.value = value;
+      if (sel.value !== value && value) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value;
+        sel.appendChild(opt);
+        sel.value = value;
+      }
+    }
+
     function resetVoterForm() {
       document.getElementById('voterEditId').value = '';
       document.getElementById('voterElectionId').value = '';
       document.getElementById('voterNik').value = '';
       document.getElementById('voterName').value = '';
-      document.getElementById('voterRt').value = '';
-      document.getElementById('voterRw').value = '';
+      document.getElementById('voterRt').value = '01';
+      document.getElementById('voterRw').value = '01';
       document.getElementById('voterFormTitle').innerText = 'Tambah DPT Pemilih Baru';
       document.getElementById('btnAddVoter').innerText = 'Simpan Data DPT';
       document.getElementById('btnCancelVoter').classList.add('hidden');
@@ -549,7 +704,7 @@
       let totalVotesCast = 0;
 
       for (const election of elections) {
-        const res = await apiRequest('getAnalytics&id_pemilihan=' + election.ID_Pemilihan, null, 'GET');
+        const res = await apiRequest('getAnalytics', { id_pemilihan: election.ID_Pemilihan }, 'GET');
         if (res.success) {
           totalDPT += res.summary.totalDPT || 0;
           totalVotesCast += res.summary.totalVotesCast || 0;
@@ -572,6 +727,13 @@
       document.getElementById('statTotalSuara').innerText = totalVotesCast;
       const participationRate = totalDPT > 0 ? ((totalVotesCast / totalDPT) * 100).toFixed(2) : 0;
       document.getElementById('statPartisipasi').innerText = participationRate + '%';
+
+      const breakdown = document.getElementById('dptBreakdown');
+      if (breakdown && initialData.dptPerElection) {
+        breakdown.innerHTML = (initialData.elections || []).map(e =>
+          `<div>• ${e.Kategori}: ${initialData.dptPerElection[String(e.ID_Pemilihan)] || 0} DPT</div>`
+        ).join('');
+      }
     }
 
     function renderSingleChart(canvasId, results, title) {

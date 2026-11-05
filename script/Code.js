@@ -74,6 +74,8 @@ function dispatchApiRequest(action, payload, method) {
         return addVoter(payload);
       case 'updateVoter':
         return updateVoter(payload);
+      case 'bulkAddVoters':
+        return bulkAddVoters(payload);
       case 'deleteVoter':
         return deleteVoter(payload);
       case 'assignVoterToElection':
@@ -195,11 +197,19 @@ function handleLogin(payload) {
 }
 
 function getInitialData() {
+  const elections = getSheetData(SHEET_NAMES.ELECTIONS);
+  const voters = getSheetData(SHEET_NAMES.VOTERS);
+  const dptPerElection = {};
+  elections.forEach(e => {
+    const id = String(e.ID_Pemilihan);
+    dptPerElection[id] = voters.filter(v => String(v.ID_Pemilihan) === id).length;
+  });
   return {
     success: true,
-    elections: getSheetData(SHEET_NAMES.ELECTIONS),
+    elections: elections,
     candidates: getSheetData(SHEET_NAMES.CANDIDATES),
-    voters: getSheetData(SHEET_NAMES.VOTERS)
+    voters: voters,
+    dptPerElection: dptPerElection
   };
 }
 
@@ -312,7 +322,7 @@ function updateVoter(payload) {
       String(row[indexes.nik]).trim() === nik &&
       String(row[indexes.election]).trim() === electionId
     );
-    if (duplicate) return { success: false, message: 'NIK sudah terdaftar di pemilihan ini' };
+    if (duplicate) return { success: false, message: 'GAGAL: NIK sudah terdaftar!' };
 
     const sheetRow = rowIndex + 1;
     sheet.getRange(sheetRow, indexes.election + 1).setValue(electionId);
@@ -323,10 +333,95 @@ function updateVoter(payload) {
       sheet.getRange(sheetRow, indexes.status + 1).setValue('Belum');
       sheet.getRange(sheetRow, indexes.staff + 1).setValue('');
     }
-    writeAuditLog(payload.user_id, payload.role, 'UPDATE_VOTER', `Memperbarui DPT ID: ${id}`);
+    writeAuditLog(payload.user_id, payload.role, 'UPDATE_VOTER', `Memperbarui Data DPT NIK: ${nik} (${name})`);
     return { success: true, message: 'Data DPT berhasil diperbarui!' };
   } catch (err) {
     return { success: false, message: 'Gagal memperbarui DPT: ' + err.toString() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Import Massal DPT (Bulk Insert dengan Validasi NIK Ganda In-Memory)
+ */
+function bulkAddVoters(payload) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return { success: false, message: 'Sistem sedang sibuk. Silakan coba beberapa saat lagi.' };
+  }
+
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAMES.VOTERS);
+    const data = sheet.getDataRange().getValues();
+    const indexes = getVoterColumnIndexes(data[0]);
+    const input = Array.isArray(payload) ? payload : (payload && payload.voters) || [];
+    if (!input.length) {
+      return { success: false, message: 'Tidak ada data DPT untuk diimpor.' };
+    }
+
+    const validElections = new Set(
+      getSheetData(SHEET_NAMES.ELECTIONS).map(e => String(e.ID_Pemilihan))
+    );
+    const existingKeys = new Set();
+    for (let i = 1; i < data.length; i++) {
+      existingKeys.add(
+        String(data[i][indexes.election]).trim() + '|' + String(data[i][indexes.nik]).trim()
+      );
+    }
+
+    const newRows = [];
+    let skipped = 0;
+    input.forEach((item, idx) => {
+      const nik = String(item.nik || '').trim();
+      const name = String(item.nama || '').trim();
+      const electionId = String(item.id_pemilihan || '').trim();
+      const rtRw = String(item.rt_rw || '').trim();
+      if (!nik || !name || !electionId || !rtRw || !validElections.has(electionId)) {
+        skipped++;
+        return;
+      }
+      const key = electionId + '|' + nik;
+      if (existingKeys.has(key)) {
+        skipped++;
+        return;
+      }
+      existingKeys.add(key);
+
+      const row = Array(data[0].length).fill('');
+      row[indexes.id] = 'VTR-' + Date.now() + '-' + idx;
+      row[indexes.election] = electionId;
+      row[indexes.nik] = nik;
+      row[indexes.name] = name;
+      row[indexes.rtRw] = rtRw;
+      row[indexes.status] = 'Belum';
+      row[indexes.staff] = '';
+      newRows.push(row);
+    });
+
+    if (!newRows.length) {
+      return { success: false, message: 'Semua data gagal validasi atau NIK sudah terdaftar.', skipped };
+    }
+
+    const startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, newRows.length, data[0].length).setValues(newRows);
+    sheet.getRange(startRow, indexes.nik + 1, newRows.length, 1).setNumberFormat('@');
+
+    writeAuditLog(
+      (payload && payload.user_id) || 'SYSTEM',
+      (payload && payload.role) || 'Admin',
+      'BULK_IMPORT_VOTER',
+      `Import masal DPT sebanyak ${newRows.length} data berhasil disimpan`
+    );
+
+    return {
+      success: true,
+      message: `Import masal DPT sebanyak ${newRows.length} data berhasil disimpan`,
+      added: newRows.length,
+      skipped
+    };
+  } catch (err) {
+    return { success: false, message: 'Gagal import DPT: ' + err.toString() };
   } finally {
     lock.releaseLock();
   }

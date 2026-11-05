@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![E-Voting](https://img.shields.io/badge/version-2.0.0-green)
+![E-Voting](https://img.shields.io/badge/version-2.1.0-green)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-yellow)
 
@@ -29,6 +29,9 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 - 📤 **Ekspor Data** - Excel dan PDF untuk dokumentasi
 - 🔄 **Multi-Election Support** - 1 NIK dapat memilih di berbagai pemilihan berbeda
 - ✏️ **CRUD Lengkap** - Kelola kandidat dan DPT dengan fitur tambah, edit, dan hapus
+- 📥 **Bulk Import DPT** - Unggah ribuan data pemilih sekaligus via Excel/CSV
+- 🔍 **Pencarian & Filter DPT** - Search real-time NIK/nama, filter pemilihan/RT/RW, dan pagination
+- 📊 **Rincian DPT per Pemilihan** - Breakdown jumlah pemilih untuk tiap jenis pemilihan
 
 ---
 
@@ -55,14 +58,19 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 
 - **Manajemen DPT (Daftar Pemilih Tetap)**
   - Tambah data pemilih baru
+  - Edit data pemilih yang sudah ada
   - Hapus data pemilih
-  - Input RT dan RW terpisah
-  - Validasi NIK unik per pemilihan (mencegah duplikasi)
+  - Import massal DPT dari file Excel/CSV (kolom: NIK, Nama_Pemilih, RT, RW, ID_Pemilihan)
+  - Input RT dan RW via dropdown (01–05) dengan format gabungan "RT xx / RW yy"
+  - Pencarian real-time berdasarkan NIK atau nama pemilih
+  - Filter berdasarkan pemilihan, RT, dan RW
+  - Pagination data (10/25/50 per halaman)
+  - Validasi NIK unik per pemilihan (mencegah duplikasi, termasuk saat import massal)
   - Tracking status pemilih
   - Tampilan kategori pemilihan di tabel DPT
 
 - **Real-time Analytics (Multi-Chart)**
-  - Total DPT terdaftar (akumulasi semua pemilihan)
+  - Total DPT terdaftar (akumulasi semua pemilihan) beserta rincian per jenis pemilihan
   - Suara masuk secara live (akumulasi semua pemilihan)
   - Tingkat partisipasi
   - Grafik perolehan suara terpisah untuk setiap pemilihan
@@ -111,7 +119,8 @@ E-Voting adalah sistem pemilihan digital berbasis web yang dirancang untuk pemil
 │              - Digital Ballot Box                        │
 └──────────────────────┬──────────────────────────────────┘
                        │
-                       │ HTTP Request (GET/POST)
+                       │ google.script.run RPC
+                       │ (tanpa hardcode URL)
                        │
 ┌──────────────────────▼──────────────────────────────────┐
 │              Backend (Google Apps Script)                │
@@ -363,6 +372,11 @@ Jika hanya perubahan UI:
 - Pastikan NIK dan ID_Pemilihan match persis
 - Cek spasi/typo di NIK
 
+### Error: "Endpoint POST tidak ditemukan"
+- Deployment `/exec` masih menjalankan versi lama — buat **New Version** di Deploy > Manage Deployments
+- Untuk testing tanpa deploy, buka URL `/dev` (selalu menjalankan kode terbaru/head)
+- Karena frontend memakai `google.script.run`, error ini hanya muncul jika masih ada kode lama yang memakai fetch ke URL `/exec`
+
 ### Error: Deploy gagal via CLASP
 - Pastikan sudah login: `clasp login`
 - Pastikan `scriptId` di `.clasp.json` benar
@@ -499,7 +513,16 @@ VTR-001    | ELC-2026-001 | 352501130795...| Muhammad Alvarisi| RT 01/RW 03| Bel
 
 ## 📝 Changelog
 
-### v2.0.0 (Security Overhaul - Terbaru)
+### v2.1.0 (Manajemen DPT & Integrasi Terbaru)
+- ✨ **Edit Data DPT**: Fitur update pemilih existing (`updateVoter`) dengan validasi NIK ganda per pemilihan
+- ✨ **Bulk Import DPT**: Import massal via Excel/CSV (`bulkAddVoters`) dengan LockService, validasi in-memory, dan penulisan `setValues` sekaligus
+- ✨ **Search, Filter & Pagination DPT**: Pencarian real-time NIK/nama, filter pemilihan/RT/RW, pagination 10/25/50
+- ✨ **Dropdown RT/RW**: Input RT dan RW di form DPT menjadi dropdown 01–05 untuk konsistensi data
+- ✨ **Rincian DPT per Pemilihan**: Breakdown jumlah DPT per kategori di kartu Total DPT dashboard
+- 🔧 **Migrasi ke `google.script.run`**: Frontend memanggil `handleApiRequest` langsung tanpa fetch/hardcode `GAS_API_URL`; selalu memakai kode terbaru tanpa deploy ulang
+- 🔧 **Audit Log Import**: Pencatatan `BULK_IMPORT_VOTER` dan pesan audit update DPT yang lebih informatif
+
+### v2.0.0 (Security Overhaul)
 - 🔒 **Password Hashing**: Implementasi SHA-256 hashing untuk password
 - 🔒 **Session Management**: Token-based authentication dengan expiry
 - 🔒 **Rate Limiting**: 30 req/min dan 100 req/hour per client
