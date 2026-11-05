@@ -150,8 +150,9 @@
       <div id="tabContent-voters" class="hidden space-y-6">
         <!-- Form Input DPT -->
         <div class="bg-white p-6 rounded-xl shadow-sm border">
-          <h3 class="font-bold text-slate-800 mb-4">Tambah DPT Pemilih Baru</h3>
+          <h3 id="voterFormTitle" class="font-bold text-slate-800 mb-4">Tambah DPT Pemilih Baru</h3>
           <form onsubmit="handleAddVoter(event)" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <input type="hidden" id="voterEditId">
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Pemilihan</label>
               <select id="voterElectionId" required class="w-full px-3 py-2 border rounded-lg text-sm"></select>
@@ -172,7 +173,8 @@
               <label class="block text-xs font-semibold text-slate-600 mb-1">RW</label>
               <input type="text" id="voterRw" required placeholder="03" class="w-full px-3 py-2 border rounded-lg text-sm">
             </div>
-            <div class="md:col-span-4 flex justify-end">
+            <div class="md:col-span-4 flex justify-end space-x-2">
+              <button type="button" id="btnCancelVoter" onclick="resetVoterForm()" class="hidden bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm">Batal</button>
               <button type="submit" id="btnAddVoter" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium">Simpan Data DPT</button>
             </div>
           </form>
@@ -394,7 +396,8 @@
             <td class="p-2">${v.RT_RW}</td>
             <td class="p-2 text-xs text-slate-600">${getElectionCategory(v.ID_Pemilihan)}</td>
             <td class="p-2"><span class="px-2 py-0.5 rounded text-[10px] ${v.Status_Memilih === 'Sudah' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">${v.Status_Memilih}</span></td>
-            <td class="p-2 text-center">
+            <td class="p-2 text-center space-x-1">
+              <button onclick="editVoter('${v.ID_Pemilih}')" class="bg-amber-500 text-white px-2 py-1 rounded text-[10px]">Edit</button>
               <button onclick="deleteVoter('${v.ID_Pemilih}')" class="bg-rose-600 text-white px-2 py-1 rounded text-[10px]">Hapus</button>
             </td>
           </tr>
@@ -474,6 +477,9 @@
       btn.disabled = true;
       btn.innerText = 'Menyimpan...';
 
+      const editId = document.getElementById('voterEditId').value;
+      const action = editId ? 'updateVoter' : 'addVoter';
+
       const rtValue = document.getElementById('voterRt').value.trim();
       const rwValue = document.getElementById('voterRw').value.trim();
       const rtRwCombined = `RT ${rtValue} / RW ${rwValue}`;
@@ -481,24 +487,55 @@
       const payload = {
         user_id: currentUser.id,
         role: currentUser.role,
+        id_pemilih: editId,
         id_pemilihan: document.getElementById('voterElectionId').value,
         nik: document.getElementById('voterNik').value,
         nama: document.getElementById('voterName').value,
         rt_rw: rtRwCombined
       };
 
-      const res = await apiRequest('addVoter', payload);
+      const res = await apiRequest(action, payload);
       btn.disabled = false;
       btn.innerText = 'Simpan Data DPT';
       alert(res.message);
 
       if (res.success) {
-        document.getElementById('voterNik').value = '';
-        document.getElementById('voterName').value = '';
-        document.getElementById('voterRt').value = '';
-        document.getElementById('voterRw').value = '';
+        resetVoterForm();
         loadAdminDashboard();
       }
+    }
+
+    function editVoter(idPemilih) {
+      const v = initialData.voters.find(item => String(item.ID_Pemilih) === String(idPemilih));
+      if (!v) return;
+
+      document.getElementById('voterEditId').value = v.ID_Pemilih;
+      document.getElementById('voterElectionId').value = v.ID_Pemilihan;
+      document.getElementById('voterNik').value = v.NIK;
+      document.getElementById('voterName').value = v.Nama_Pemilih;
+      
+      const rtRwParts = v.RT_RW.split(' / ');
+      if (rtRwParts.length === 2) {
+        document.getElementById('voterRt').value = rtRwParts[0].replace('RT ', '');
+        document.getElementById('voterRw').value = rtRwParts[1].replace('RW ', '');
+      }
+
+      document.getElementById('voterFormTitle').innerText = 'Edit Data DPT';
+      document.getElementById('btnAddVoter').innerText = 'Update Data DPT';
+      document.getElementById('btnCancelVoter').classList.remove('hidden');
+      switchAdminTab('voters');
+    }
+
+    function resetVoterForm() {
+      document.getElementById('voterEditId').value = '';
+      document.getElementById('voterElectionId').value = '';
+      document.getElementById('voterNik').value = '';
+      document.getElementById('voterName').value = '';
+      document.getElementById('voterRt').value = '';
+      document.getElementById('voterRw').value = '';
+      document.getElementById('voterFormTitle').innerText = 'Tambah DPT Pemilih Baru';
+      document.getElementById('btnAddVoter').innerText = 'Simpan Data DPT';
+      document.getElementById('btnCancelVoter').classList.add('hidden');
     }
 
     async function renderAllCharts() {
